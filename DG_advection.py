@@ -167,8 +167,8 @@ qs = []
 # condition, :math:`q_\mathrm{in}`.  In general, this would be a ``Function``, but
 # here we just use a ``Constant`` value. ::
 
-T = 2*math.pi
-dt = T/600.0
+T = 4*math.pi
+dt = T/785.0
 dtc = Constant(dt)
 q_in = Constant(1.0)
 
@@ -302,7 +302,7 @@ def animate(q):
 interval = 1e3 * output_freq * dt
 animation = FuncAnimation(fig, animate, frames=qs, interval=interval)
 try:
-    animation.save("DG_advection.mp4", writer="ffmpeg")
+    animation.save("DG_advection_4pi_785.mp4", writer="ffmpeg")
 except:
     print("Failed to write movie! Try installing `ffmpeg`.")
 
