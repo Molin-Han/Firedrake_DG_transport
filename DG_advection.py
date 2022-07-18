@@ -248,10 +248,11 @@ solv3 = LinearVariationalSolver(prob3, solver_parameters=params)
 # We now run the time loop.  This consists of three Runge-Kutta stages, and every
 # 20 steps we write out the solution to file and print the current time to the
 # terminal. ::
-
+limiter = VertexBasedLimiter(V)
 t = 0.0
 step = 0
 output_freq = 20
+limiter.apply(V)
 while t < T - 0.5*dt:
     solv1.solve()
     q1.assign(q + dq)
