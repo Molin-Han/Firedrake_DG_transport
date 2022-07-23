@@ -3,6 +3,8 @@ import math
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 
+from Firedrake_DG_transport.DG_advection import L1, L3
+
 mesh = UnitSquareMesh(40, 40, quadrilateral=True)
 
 #make the function space
@@ -44,3 +46,12 @@ a = phi * dq_trial * dx
 
 n = FacetNormal(mesh)
 un = 0.5*(dot(u, n) + abs(dot(u, n)))
+
+
+
+
+
+
+L1
+L2
+L3
