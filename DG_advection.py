@@ -168,7 +168,7 @@ qs = []
 # here we just use a ``Constant`` value. ::
 
 T = 4*math.pi
-dt = T/785.0
+dt = T/1200
 dtc = Constant(dt)
 q_in = Constant(1.0)
 
@@ -252,7 +252,7 @@ limiter = VertexBasedLimiter(V)
 t = 0.0
 step = 0
 output_freq = 20
-limiter.apply(V)
+#limiter.apply(q)
 while t < T - 0.5*dt:
     solv1.solve()
     q1.assign(q + dq)
@@ -303,7 +303,7 @@ def animate(q):
 interval = 1e3 * output_freq * dt
 animation = FuncAnimation(fig, animate, frames=qs, interval=interval)
 try:
-    animation.save("DG_advection_4pi_785.mp4", writer="ffmpeg")
+    animation.save("DG_advection_trial.mp4", writer="ffmpeg")
 except:
     print("Failed to write movie! Try installing `ffmpeg`.")
 
