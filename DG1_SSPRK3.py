@@ -15,7 +15,7 @@ x, y = SpatialCoordinate(mesh)
 
 r = sqrt(pow(x-0.5, 2) + pow(y-0.5, 2))
 
-velocity = as_vector(( -x*(x-1)*(2*y -1 ) , (2* x - 1)*y *(y -1) ))
+velocity = as_vector(( (0.5 - y) , (x - 0.5) ))
 u = Function(W).interpolate(velocity)
 
 
@@ -36,7 +36,7 @@ q_init = Function(V).assign(q)
 qs = []
 
 T = 2*math.pi
-dt = T/3600
+dt = T/1200
 dtc = Constant(dt)
 q_in = Constant(1.0)
 
@@ -73,29 +73,49 @@ t = 0.0
 step = 0
 output_freq = 20
 #Apply it first to q
-limiter.apply(q)
+#limiter.apply(q)
+
+#bad limiter for each stage.
+DG0 = FunctionSpace(mesh, "DG", 0)
+qbar = Function(DG0)
+q1bar = Function(DG0)
+q2bar = Function(DG0)
 
 
 if step % output_freq == 0:
     qs.append(q.copy(deepcopy=True))
     print("t=", t)
+qbar.project(q)
+q.project(qbar)
+print(q.dat.data.max())
+
 
 while t < T - 0.5*dt:
     solv1.solve()
     q1.assign(q + dq)
-    limiter.apply(q1)
+    q1bar.project(q1)
+    q1.project(q1bar)
+    #limiter.apply(q1)
 
     solv2.solve()
-    q1.assign(q1+dq)
-    limiter.apply(q1)
-    q2.assign(0.75*q + 0.25*(q1))
-    limiter.apply(q2)
+    #q1.assign(q1+dq)
+    #limiter.apply(q1)
+    q2.assign(0.75*q + 0.25*(q1 + dq))
+    #limiter.apply(q2)
+    q2bar.project(q2)
+    q2.project(q2bar)
 
     solv3.solve()
-    q2.assign(q2+dq)
-    limiter.apply(q2)
-    q.assign((1.0/3.0)*q + (2.0/3.0)*q2)
-    limiter.apply(q)
+    #q2.assign(q2+dq)
+    #limiter.apply(q2)
+    q.assign((1.0/3.0)*q + (2.0/3.0)*(q2+dq))
+    #limiter.apply(q)
+
+
+    qbar.project(q)
+    q.project(qbar)
+
+
     print(q.dat.data.max())
     step += 1
     t += dt
@@ -116,15 +136,15 @@ fn_plotter = FunctionPlotter(mesh, num_sample_points=nsp)
 
 fig, axes = plt.subplots()
 axes.set_aspect('equal')
-colors = tripcolor(q_init, num_sample_pointks=nsp, vmin=1, vmax=2, axes=axes)
+colors = tripcolor(q_init, num_sample_points=nsp, vmin=1, vmax=2, axes=axes)
 fig.colorbar(colors)
 
-def animate(q):
-    colors.set_array(fn_plotter(q))
+#def animate(q):
+    #colors.set_array(fn_plotter(q))
 
-interval = 1e3 * output_freq * dt
-animation = FuncAnimation(fig, animate, frames=qs, interval=interval)
-try:
-    animation.save("DG_advection_oscillating1.mp4", writer="ffmpeg")
-except:
-    print("Failed to write movie! Try installing `ffmpeg`.")
+#interval = 1e3 * output_freq * dt
+#animation = FuncAnimation(fig, animate, frames=qs, interval=interval)
+#try:
+    #animation.save("DG_advection_oscillating1.mp4", writer="ffmpeg")
+#except:
+    #print("Failed to write movie! Try installing `ffmpeg`.")
