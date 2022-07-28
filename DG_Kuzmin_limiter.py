@@ -1,19 +1,17 @@
 from firedrake import *
 import math
+%matplotlib inline
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 
-
 mesh = UnitSquareMesh(40, 40, quadrilateral=True)
-
 
 V = FunctionSpace(mesh, "DQ", 1)
 W = VectorFunctionSpace(mesh, "CG", 1)
 
-
 x, y = SpatialCoordinate(mesh)
 
-velocity = as_vector(( (0.5 - y) , (x - 0.5) ))
+velocity = as_vector(( (0.5 - y ) , ( x - 0.5) ))
 u = Function(W).interpolate(velocity)
 
 
@@ -64,29 +62,25 @@ solv2 = LinearVariationalSolver(prob2, solver_parameters=params)
 prob3 = LinearVariationalProblem(a, L3, dq)
 solv3 = LinearVariationalSolver(prob3, solver_parameters=params)
 
-#Set limiter
+
+#Set Kuzmin limiter
 limiter = VertexBasedLimiter(V)
 
 t = 0.0
 step = 0
 output_freq = 20
-#Apply it first to q
-#limiter.apply(q)
-
-#bad limiter for each stage.
-DG0 = FunctionSpace(mesh, "DG", 0)
-qbar = Function(DG0)
-q1bar = Function(DG0)
-q2bar = Function(DG0)
 
 
 if step % output_freq == 0:
     qs.append(q.copy(deepcopy=True))
     print("t=", t)
-qbar.project(q)
-q.project(qbar)
+
+#Apply the limiter to q first.
+limiter.apply(q)
 print(q.dat.data.max())
 
+
+#Main body
 
 while t < T - 0.5*dt:
     solv1.solve()
