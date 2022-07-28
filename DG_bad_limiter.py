@@ -6,18 +6,13 @@ from matplotlib.animation import FuncAnimation
 
 mesh = UnitSquareMesh(40, 40, quadrilateral=True)
 
-
 V = FunctionSpace(mesh, "DQ", 1)
 W = VectorFunctionSpace(mesh, "CG", 1)
 
-
 x, y = SpatialCoordinate(mesh)
 
-r = sqrt(pow(x-0.5, 2) + pow(y-0.5, 2))
-
-velocity = as_vector(( -x*(x-1)*(2*y -1 ) , (2* x - 1)*y *(y -1) ))
+velocity = as_vector(( (0.5 - y ), ( x - 0.5) ))
 u = Function(W).interpolate(velocity)
-
 
 bell_r0 = 0.15; bell_x0 = 0.25; bell_y0 = 0.5
 cone_r0 = 0.15; cone_x0 = 0.5; cone_y0 = 0.25
@@ -30,15 +25,16 @@ slot_cyl = conditional(sqrt(pow(x-cyl_x0, 2) + pow(y-cyl_y0, 2)) < cyl_r0,
              conditional(And(And(x > slot_left, x < slot_right), y < slot_top),
                0.0, 1.0), 0.0)
 
+
 q = Function(V).interpolate(1.0 + bell + cone + slot_cyl)
 q_init = Function(V).assign(q)
 
 qs = []
-
 T = 2*math.pi
-dt = T/3600
+dt = T/1200
 dtc = Constant(dt)
 q_in = Constant(1.0)
+
 
 dq_trial = TrialFunction(V)
 phi = TestFunction(V)
@@ -47,14 +43,15 @@ a = phi*dq_trial*dx
 n = FacetNormal(mesh)
 un = 0.5*(dot(u, n) + abs(dot(u, n)))
 
+
 L1 = dtc*(q*div(phi*u)*dx
           - conditional(dot(u, n) < 0, phi*dot(u, n)*q_in, 0.0)*ds
           - conditional(dot(u, n) > 0, phi*dot(u, n)*q, 0.0)*ds
           - (phi('+') - phi('-'))*(un('+')*q('+') - un('-')*q('-'))*dS)
 
-
 q1 = Function(V); q2 = Function(V)
 L2 = replace(L1, {q: q1}); L3 = replace(L1, {q: q2})
+
 
 dq = Function(V)
 
@@ -66,36 +63,38 @@ solv2 = LinearVariationalSolver(prob2, solver_parameters=params)
 prob3 = LinearVariationalProblem(a, L3, dq)
 solv3 = LinearVariationalSolver(prob3, solver_parameters=params)
 
-#Set limiter
-limiter = VertexBasedLimiter(V)
+
 
 t = 0.0
 step = 0
 output_freq = 20
-#Apply it first to q
-limiter.apply(q)
+
+
+#apply the bad limiter
+DG0 = FunctionSpace(mesh, "DG", 0)
+qbar = Function(DG0)
 
 
 if step % output_freq == 0:
     qs.append(q.copy(deepcopy=True))
     print("t=", t)
-
+print(q.dat.data.max())
+qbar.project(q)
+q.project(qbar)
 while t < T - 0.5*dt:
     solv1.solve()
     q1.assign(q + dq)
-    limiter.apply(q1)
 
     solv2.solve()
     q1.assign(q1+dq)
-    limiter.apply(q1)
-    q2.assign(0.75*q + 0.25*(q1))
-    limiter.apply(q2)
+    q2.assign(0.75*q + 0.25*(q1 + dq))
 
     solv3.solve()
     q2.assign(q2+dq)
-    limiter.apply(q2)
-    q.assign((1.0/3.0)*q + (2.0/3.0)*q2)
-    limiter.apply(q)
+    q.assign((1.0/3.0)*q + (2.0/3.0)*(q2 + dq))
+    #limiter.apply(q)
+    qbar.project(q)
+    q.project(qbar)
     print(q.dat.data.max())
     step += 1
     t += dt
@@ -104,19 +103,16 @@ while t < T - 0.5*dt:
         qs.append(q.copy(deepcopy=True))
         print("t=", t)
 
-
-
 L2_err = sqrt(assemble((q - q_init)*(q - q_init)*dx))
 L2_init = sqrt(assemble(q_init*q_init*dx))
 print(L2_err/L2_init)
-
 
 nsp = 16
 fn_plotter = FunctionPlotter(mesh, num_sample_points=nsp)
 
 fig, axes = plt.subplots()
 axes.set_aspect('equal')
-colors = tripcolor(q_init, num_sample_pointks=nsp, vmin=1, vmax=2, axes=axes)
+colors = tripcolor(q_init, num_sample_points=nsp, vmin=1, vmax=2, axes=axes)
 fig.colorbar(colors)
 
 def animate(q):
@@ -125,6 +121,6 @@ def animate(q):
 interval = 1e3 * output_freq * dt
 animation = FuncAnimation(fig, animate, frames=qs, interval=interval)
 try:
-    animation.save("DG_advection_oscillating1.mp4", writer="ffmpeg")
+    animation.save("DG_bad_1.mp4", writer="ffmpeg")
 except:
     print("Failed to write movie! Try installing `ffmpeg`.")
