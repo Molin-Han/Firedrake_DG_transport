@@ -25,13 +25,13 @@ slot_cyl = conditional(sqrt(pow(x-cyl_x0, 2) + pow(y-cyl_y0, 2)) < cyl_r0,
              conditional(And(And(x > slot_left, x < slot_right), y < slot_top),
                0.0, 1.0), 0.0)
 #+ bell + cone + slot_cyl
-q = Function(V).interpolate(1.0 + bell + cone + slot_cyl)
+q = Function(V).interpolate(Constant(1.0))
 q_init = Function(V).assign(q)
 
 qs = []
 
 T = 2*math.pi
-dt = T/36000
+dt = T/3600
 dtc = Constant(dt)
 q_in = Constant(1.0)
 
