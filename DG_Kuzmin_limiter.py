@@ -3,9 +3,9 @@ import math
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 
-mesh = UnitSquareMesh(40, 40, quadrilateral=True)
+mesh = UnitSquareMesh(40, 40)
 
-V = FunctionSpace(mesh, "DQ", 1)
+V = FunctionSpace(mesh, "DG", 1)
 W = VectorFunctionSpace(mesh, "CG", 1)
 
 x, y = SpatialCoordinate(mesh)
@@ -30,8 +30,8 @@ q_init = Function(V).assign(q)
 
 qs = []
 
-T = 2*math.pi
-dt = T/36000
+T = 0.1
+dt = 0.001
 dtc = Constant(dt)
 q_in = Constant(1.0)
 
@@ -78,6 +78,9 @@ if step % output_freq == 0:
 limiter.apply(q)
 print(q.dat.data.max())
 
+indicator = Function(V)
+
+
 
 #Main body
 
@@ -97,6 +100,8 @@ while t < T - 0.5*dt:
     limiter.apply(q2)
     q.assign((1.0/3.0)*q + (2.0/3.0)*(q2))
     limiter.apply(q)
+    indicator.interpolate(conditional(q>2, 1, 0))
+    plt.plot()
 
 
     print(q.dat.data.max())
@@ -104,7 +109,7 @@ while t < T - 0.5*dt:
     t += dt
 
     if step % output_freq == 0:
-        qs.append(q.copy(deepcopy=True))
+        qs.append(indicator.copy(deepcopy=True))
         print("t=", t)
 
 
@@ -114,20 +119,20 @@ L2_init = sqrt(assemble(q_init*q_init*dx))
 print(L2_err/L2_init)
 
 
-#nsp = 16
-#fn_plotter = FunctionPlotter(mesh, num_sample_points=nsp)
+nsp = 16
+fn_plotter = FunctionPlotter(mesh, num_sample_points=nsp)
 
-#fig, axes = plt.subplots()
-#axes.set_aspect('equal')
-#colors = tripcolor(q_init, num_sample_points=nsp, vmin=1, vmax=2, axes=axes)
-#fig.colorbar(colors)
+fig, axes = plt.subplots()
+axes.set_aspect('equal')
+colors = tripcolor(q_init, num_sample_points=nsp, vmin=0, vmax=1, axes=axes)
+fig.colorbar(colors)
 
-#def animate(q):
-    #colors.set_array(fn_plotter(q))
+def animate(q):
+    colors.set_array(fn_plotter(q))
 
-#interval = 1e3 * output_freq * dt
-#animation = FuncAnimation(fig, animate, frames=qs, interval=interval)
-#try:
-    #animation.save("DG_advection_oscillating1.mp4", writer="ffmpeg")
-#except:
-    #print("Failed to write movie! Try installing `ffmpeg`.")
+interval = 1e3 * output_freq * dt
+animation = FuncAnimation(fig, animate, frames=qs, interval=interval)
+try:
+    animation.save("DG_advection11.mp4", writer="ffmpeg")
+except:
+    print("Failed to write movie! Try installing `ffmpeg`.")

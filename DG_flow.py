@@ -25,40 +25,40 @@ slot_cyl = conditional(sqrt(pow(x-cyl_x0, 2) + pow(y-cyl_y0, 2)) < cyl_r0,
              conditional(And(And(x > slot_left, x < slot_right), y < slot_top),
                0.0, 1.0), 0.0)
 #+ bell + cone + slot_cyl
-q = Function(V).interpolate(1.0 + bell + cone + slot_cyl)
-q_init = Function(V).assign(q)
+pho = Function(V).interpolate(1.0 + bell + cone + slot_cyl)
+pho_init = Function(V).assign(pho)
 
-qs = []
+phos = []
 
 T = 2*math.pi
-dt = T/36000
+dt = T/1200
 dtc = Constant(dt)
-q_in = Constant(1.0)
+pho_in = Constant(1.0)
 
-dq_trial = TrialFunction(V)
+dpho_trial = TrialFunction(V)
 phi = TestFunction(V)
-a = phi*dq_trial*dx
+a = phi*dpho_trial*dx
 
 n = FacetNormal(mesh)
 un = 0.5*(dot(u, n) + abs(dot(u, n)))
 
-L1 = dtc*(q*div(phi*u)*dx
-          - conditional(dot(u, n) < 0, phi*dot(u, n)*q_in, 0.0)*ds
-          - conditional(dot(u, n) > 0, phi*dot(u, n)*q, 0.0)*ds
-          - (phi('+') - phi('-'))*(un('+')*q('+') - un('-')*q('-'))*dS)
+L1 = dtc*(pho*(div(phi*u)-div(u))*dx
+          - conditional(dot(u, n) < 0, phi*dot(u, n)*pho_in, 0.0)*ds
+          - conditional(dot(u, n) > 0, phi*dot(u, n)*pho, 0.0)*ds
+          - (phi('+') - phi('-'))*(un('+')*pho('+') - un('-')*pho('-'))*dS)
 
 
-q1 = Function(V); q2 = Function(V)
-L2 = replace(L1, {q: q1}); L3 = replace(L1, {q: q2})
+pho1 = Function(V); pho2 = Function(V)
+L2 = replace(L1, {pho: pho1}); L3 = replace(L1, {pho: pho2})
 
-dq = Function(V)
+dpho = Function(V)
 
 params = {'ksp_type': 'preonly', 'pc_type': 'bjacobi', 'sub_pc_type': 'ilu'}
-prob1 = LinearVariationalProblem(a, L1, dq)
+prob1 = LinearVariationalProblem(a, L1, dpho)
 solv1 = LinearVariationalSolver(prob1, solver_parameters=params)
-prob2 = LinearVariationalProblem(a, L2, dq)
+prob2 = LinearVariationalProblem(a, L2, dpho)
 solv2 = LinearVariationalSolver(prob2, solver_parameters=params)
-prob3 = LinearVariationalProblem(a, L3, dq)
+prob3 = LinearVariationalProblem(a, L3, dpho)
 solv3 = LinearVariationalSolver(prob3, solver_parameters=params)
 
 
@@ -71,46 +71,46 @@ output_freq = 20
 
 
 if step % output_freq == 0:
-    qs.append(q.copy(deepcopy=True))
+    phos.append(pho.copy(deepcopy=True))
     print("t=", t)
 
 #Apply the limiter to q first.
-limiter.apply(q)
-print(q.dat.data.max())
+limiter.apply(pho)
+print(pho.dat.data.max())
 
 
 #Main body
 
 while t < T - 0.5*dt:
     solv1.solve()
-    q1.assign(q + dq)
-    limiter.apply(q1)
+    pho1.assign(pho + dpho)
+    limiter.apply(pho1)
 
     solv2.solve()
-    q1.assign(q1+dq)
-    limiter.apply(q1)
-    q2.assign(0.75*q + 0.25*(q1))
-    limiter.apply(q2)
+    pho1.assign(pho1+dpho)
+    limiter.apply(pho1)
+    pho2.assign(0.75*pho + 0.25*(pho1))
+    limiter.apply(pho2)
 
     solv3.solve()
-    q2.assign(q2+dq)
-    limiter.apply(q2)
-    q.assign((1.0/3.0)*q + (2.0/3.0)*(q2))
-    limiter.apply(q)
+    pho2.assign(pho2+dpho)
+    limiter.apply(pho2)
+    pho.assign((1.0/3.0)*pho + (2.0/3.0)*(pho2))
+    limiter.apply(pho)
 
 
-    print(q.dat.data.max())
+    print(pho.dat.data.max())
     step += 1
     t += dt
 
     if step % output_freq == 0:
-        qs.append(q.copy(deepcopy=True))
+        phos.append(pho.copy(deepcopy=True))
         print("t=", t)
 
 
 
-L2_err = sqrt(assemble((q - q_init)*(q - q_init)*dx))
-L2_init = sqrt(assemble(q_init*q_init*dx))
+L2_err = sqrt(assemble((pho - pho_init)*(pho - pho_init)*dx))
+L2_init = sqrt(assemble(pho_init*pho_init*dx))
 print(L2_err/L2_init)
 
 
