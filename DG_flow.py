@@ -26,7 +26,7 @@ slot_cyl = conditional(sqrt(pow(x-cyl_x0, 2) + pow(y-cyl_y0, 2)) < cyl_r0,
                0.0, 1.0), 0.0)
 #+ bell + cone + slot_cyl
 rho = Function(V).interpolate(1.0 + bell + cone + slot_cyl)
-rho_init = Function(V).assign(pho)
+rho_init = Function(V).assign(rho)
 
 rhos = []
 
@@ -42,7 +42,7 @@ a = phi*drho_trial*dx
 n = FacetNormal(mesh)
 un = 0.5*(dot(u, n) + abs(dot(u, n)))
 
-L1 = dtc*(rho*(div(phi*u)-div(u))*dx
+L1 = dtc*(rho*dot(grad(phi),u)*dx
           - conditional(dot(u, n) < 0, phi*dot(u, n)*rho_in, 0.0)*ds
           - conditional(dot(u, n) > 0, phi*dot(u, n)*rho, 0.0)*ds
           - (phi('+') - phi('-'))*(un('+')*rho('+') - un('-')*rho('-'))*dS)
@@ -114,20 +114,20 @@ L2_init = sqrt(assemble(rho_init*rho_init*dx))
 print(L2_err/L2_init)
 
 
-#nsp = 16
-#fn_plotter = FunctionPlotter(mesh, num_sample_points=nsp)
+nsp = 16
+fn_plotter = FunctionPlotter(mesh, num_sample_points=nsp)
 
-#fig, axes = plt.subplots()
-#axes.set_aspect('equal')
-#colors = tripcolor(q_init, num_sample_points=nsp, vmin=1, vmax=2, axes=axes)
-#fig.colorbar(colors)
+fig, axes = plt.subplots()
+axes.set_aspect('equal')
+colors = tripcolor(rho_init, num_sample_points=nsp, vmin=1, vmax=2, axes=axes)
+fig.colorbar(colors)
 
-#def animate(q):
-    #colors.set_array(fn_plotter(q))
+def animate(q):
+    colors.set_array(fn_plotter(q))
 
-#interval = 1e3 * output_freq * dt
-#animation = FuncAnimation(fig, animate, frames=qs, interval=interval)
-#try:
-    #animation.save("DG_advection_oscillating1.mp4", writer="ffmpeg")
-#except:
-    #print("Failed to write movie! Try installing `ffmpeg`.")
+interval = 1e3 * output_freq * dt
+animation = FuncAnimation(fig, animate, frames=rhos, interval=interval)
+try:
+    animation.save("DG_continuity1.mp4", writer="ffmpeg")
+except:
+    print("Failed to write movie! Try installing `ffmpeg`.")
