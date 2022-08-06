@@ -1,3 +1,4 @@
+from firedrake import *
 # Define function spaces and basis functions
 V_dg = FunctionSpace(mesh, "DG", 1)
 M = FunctionSpace(mesh, "RT", 2)
