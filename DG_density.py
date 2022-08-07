@@ -10,7 +10,7 @@ W = VectorFunctionSpace(mesh, "CG", 1)
 
 x, y = SpatialCoordinate(mesh)
 
-velocity = as_vector(( (0.5 - y ) , ( x - 0.5) ))
+velocity = as_vector(( (0.05*x - y+0.475 ) , ( x + 0.05*y-0.525) ))
 u = Function(W).interpolate(velocity)
 
 
@@ -128,6 +128,6 @@ def animate(q):
 interval = 1e3 * output_freq * dt
 animation = FuncAnimation(fig, animate, frames=rhos, interval=interval)
 try:
-    animation.save("DG_continuity1.mp4", writer="ffmpeg")
+    animation.save("DG_continuity_nondivfree3.mp4", writer="ffmpeg")
 except:
     print("Failed to write movie! Try installing `ffmpeg`.")
