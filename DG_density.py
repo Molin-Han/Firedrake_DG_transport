@@ -10,7 +10,7 @@ W = VectorFunctionSpace(mesh, "CG", 1)
 
 x, y = SpatialCoordinate(mesh)
 
-velocity = as_vector(( (0.05*x - y+0.475 ) , ( x + 0.05*y-0.525) ))
+velocity = as_vector(( (0.05*x - y+0.475 ) , ( x + 0.05*y-0.525)))
 u = Function(W).interpolate(velocity)
 
 
@@ -22,8 +22,8 @@ slot_left = 0.475; slot_right = 0.525; slot_top = 0.85
 bell = 0.25*(1+cos(math.pi*min_value(sqrt(pow(x-bell_x0, 2) + pow(y-bell_y0, 2))/bell_r0, 1.0)))
 cone = 1.0 - min_value(sqrt(pow(x-cone_x0, 2) + pow(y-cone_y0, 2))/cyl_r0, 1.0)
 slot_cyl = conditional(sqrt(pow(x-cyl_x0, 2) + pow(y-cyl_y0, 2)) < cyl_r0,
-             conditional(And(And(x > slot_left, x < slot_right), y < slot_top),
-               0.0, 1.0), 0.0)
+            conditional(And(And(x > slot_left, x < slot_right), y < slot_top),
+            0.0, 1.0), 0.0)
 #+ bell + cone + slot_cyl
 rho = Function(V).interpolate(1.0 + bell + cone + slot_cyl)
 rho_init = Function(V).assign(rho)

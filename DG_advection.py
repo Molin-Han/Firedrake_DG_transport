@@ -302,10 +302,10 @@ def animate(q):
 
 interval = 1e3 * output_freq * dt
 animation = FuncAnimation(fig, animate, frames=qs, interval=interval)
-try:
-    animation.save("DG_advection_trial.mp4", writer="ffmpeg")
-except:
-    print("Failed to write movie! Try installing `ffmpeg`.")
+#try:
+    #animation.save("DG_advection_trial.mp4", writer="ffmpeg")
+#except:
+    #print("Failed to write movie! Try installing `ffmpeg`.")
 
 # This demo can be found as a script in
 # `DG_advection.py <DG_advection.py>`__.
