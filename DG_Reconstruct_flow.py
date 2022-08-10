@@ -1,10 +1,11 @@
 from firedrake import *
+mesh = UnitSquareMesh(40, 40)
 # Define function spaces and basis functions
 V_dg = FunctionSpace(mesh, "DG", 1)
 M = FunctionSpace(mesh, "RT", 2)
 
 # advecting velocity
-u0 = Expression(('-x[1]','x[0]','0'))
+u0 = as_vector(('-x[1]','x[0]','0'))
 u = Function(M).project(u0)
 
 # Mesh-related functions
