@@ -79,6 +79,38 @@ limiter.apply(rho)
 print(rho.dat.data.max())
 
 
+#Flux Problem
+# Surface Flux equation - build RT2 out of BDM1 and TDG1
+Fluxes = FunctionSpace(mesh,"BDM",1)
+Inners = FunctionSpace(mesh,"DRT",1)
+W = MixedFunctionSpace((Fluxes,Inners))
+
+wI = TestFunction(Inners)
+assemble(inner(wI,u)*dx)
+
+wF,wI = TestFunctions(W)
+uF,uI = TrialFunctions(W)
+
+aFs = (
+    (inner(wF('+'),n('+'))*inner(uF('+'),n('+')) + 
+     inner(wF('-'),n('-'))*inner(uF('-'),n('-')))*dS
+    + inner(wI,uI)*dx
+    )
+LFs = (
+    2.0*(inner(wF('+'),n('+'))*un('+')*D('+') 
+         + inner(wF('-'),n('-'))*un('-')*D('-'))*dS
+    + inner(wI,u)*D*dx
+    )
+
+Fs = Function(W)
+
+Fsproblem = LinearVariationalProblem(aFs, LFs, Fs)
+Fssolver = LinearVariationalSolver(Fsproblem)
+
+
+Fs=[]
+
+
 #Main body
 
 while t < T - 0.5*dt:
@@ -100,6 +132,12 @@ while t < T - 0.5*dt:
 
 
     print(rho.dat.data.max())
+
+
+    Fssolver.solve()
+
+
+
     step += 1
     t += dt
 
