@@ -101,7 +101,6 @@ while t < T - 0.5*dt:
     q.assign((1.0/3.0)*q + (2.0/3.0)*(q2))
     limiter.apply(q)
     indicator.interpolate(conditional(q>2, 1, 0))
-    plt.plot()
 
 
     print(q.dat.data.max())

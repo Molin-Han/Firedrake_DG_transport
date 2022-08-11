@@ -107,17 +107,28 @@ L1_q = dtc*(q*dot(grad(phi),Fs)*dx
 
 q1 = Function(V); q2 = Function(V)
 L2_q = replace(L1_q, {q: q1}); L3_q = replace(L1_q, {q: q2})
+dq = Function(V)
 
 
 
 
 params = {'ksp_type': 'preonly', 'pc_type': 'bjacobi', 'sub_pc_type': 'ilu'}
-prob1 = LinearVariationalProblem(a, L1_rho, drho)
-solv1 = LinearVariationalSolver(prob1, solver_parameters=params)
-prob2 = LinearVariationalProblem(a, L2_rho, drho)
-solv2 = LinearVariationalSolver(prob2, solver_parameters=params)
-prob3 = LinearVariationalProblem(a, L3_rho, drho)
-solv3 = LinearVariationalSolver(prob3, solver_parameters=params)
+prob1_rho = LinearVariationalProblem(a, L1_rho, drho)
+solv1_rho = LinearVariationalSolver(prob1_rho, solver_parameters=params)
+prob2_rho = LinearVariationalProblem(a, L2_rho, drho)
+solv2_rho = LinearVariationalSolver(prob2_rho, solver_parameters=params)
+prob3_rho = LinearVariationalProblem(a, L3_rho, drho)
+solv3_rho = LinearVariationalSolver(prob3_rho, solver_parameters=params)
+
+
+prob1_q = LinearVariationalProblem(a, L1_q, dq)
+solv1_q = LinearVariationalSolver(prob1_q, solver_parameters=params)
+prob2_q = LinearVariationalProblem(a, L2_q, dq)
+solv2_q = LinearVariationalSolver(prob2_q, solver_parameters=params)
+prob3_q = LinearVariationalProblem(a, L3_q, dq)
+solv3_q = LinearVariationalSolver(prob3_q, solver_parameters=params)
+
+
 
 
 #Set Kuzmin limiter
@@ -132,10 +143,11 @@ if step % output_freq == 0:
     rhos.append(rho.copy(deepcopy=True))
     print("t=", t)
 
-#Apply the limiter to q first.
+#Apply the limiter to q and density first.
 limiter.apply(rho)
 print(rho.dat.data.max())
-
+limiter.apply(q)
+print(q.dat.data.max())
 
 
 
@@ -143,17 +155,18 @@ print(rho.dat.data.max())
 #Main body
 
 while t < T - 0.5*dt:
-    solv1.solve()
+    #solve the density
+    solv1_rho.solve()
     rho1.assign(rho + drho)
     limiter.apply(rho1)
 
-    solv2.solve()
+    solv2_rho.solve()
     rho1.assign(rho1+drho)
     limiter.apply(rho1)
     rho2.assign(0.75*rho + 0.25*(rho1))
     limiter.apply(rho2)
 
-    solv3.solve()
+    solv3_rho.solve()
     rho2.assign(rho2+drho)
     limiter.apply(rho2)
     rho.assign((1.0/3.0)*rho + (2.0/3.0)*(rho2))
@@ -162,10 +175,24 @@ while t < T - 0.5*dt:
 
     print(rho.dat.data.max())
 
-
+    #solve the flux problem
     Fssolver.solve()
 
-    Fs
+    solv1_q.solve()
+    q1.assign(q + dq)
+    limiter.apply(q1)
+
+    solv2_q.solve()
+    q1.assign(q1+dq)
+    limiter.apply(q1)
+    q2.assign(0.75*q + 0.25*(q1))
+    limiter.apply(q2)
+
+    solv3_q.solve()
+    q2.assign(q2+dq)
+    limiter.apply(q2)
+    q.assign((1.0/3.0)*q + (2.0/3.0)*(q2))
+    limiter.apply(q)
 
 
 
@@ -174,13 +201,18 @@ while t < T - 0.5*dt:
 
     if step % output_freq == 0:
         rhos.append(rho.copy(deepcopy=True))
+        qs.append(q.copy(deepcopy=True))
         print("t=", t)
 
 
 
-L2_err = sqrt(assemble((rho - rho_init)*(rho - rho_init)*dx))
-L2_init = sqrt(assemble(rho_init*rho_init*dx))
-print(L2_err/L2_init)
+L2_err_rho = sqrt(assemble((rho - rho_init)*(rho - rho_init)*dx))
+L2_init_rho = sqrt(assemble(rho_init*rho_init*dx))
+print(L2_err_rho/L2_init_rho)
+
+L2_err_q = sqrt(assemble((q - q_init)*(q - q_init)*dx))
+L2_init_q = sqrt(assemble(q_init*q_init*dx))
+print(L2_err_q/L2_init_q)
 
 
 nsp = 16
@@ -195,8 +227,10 @@ def animate(q):
     colors.set_array(fn_plotter(q))
 
 interval = 1e3 * output_freq * dt
-animation = FuncAnimation(fig, animate, frames=rhos, interval=interval)
-#try:
-    #animation.save("DG_continuity_nondivfree3.mp4", writer="ffmpeg")
-#except:
-    #print("Failed to write movie! Try installing `ffmpeg`.")
+animation_rho = FuncAnimation(fig, animate, frames=rhos, interval=interval)
+animation_q = FuncAnimation(fig, animate, frames=qs, interval=interval)
+try:
+    animation_rho.save("DG_rho_1.mp4", writer="ffmpeg")
+    animation_q.save("DG_q_1.mp4", writer="ffmpeg")
+except:
+    print("Failed to write movie! Try installing `ffmpeg`.")
