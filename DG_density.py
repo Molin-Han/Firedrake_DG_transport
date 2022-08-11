@@ -54,7 +54,6 @@ b = phi*dq_trial*dx
 #elements
 n = FacetNormal(mesh)
 un = 0.5*(dot(u, n) + abs(dot(u, n)))
-Fn = 0.5*(dot(Fs, n) + abs(dot(Fs, n)))
 
 #variational problems for density
 L1_rho = dtc*(rho*dot(grad(phi),u)*dx
@@ -96,8 +95,8 @@ Fs = Function(W)
 
 Fsproblem = LinearVariationalProblem(aFs, LFs, Fs)
 Fssolver = LinearVariationalSolver(Fsproblem)
-
-
+Fssolver.solve()
+Fn = 0.5*(dot(Fs, n) + abs(dot(Fs, n)))
 
 #variational problem for q
 L1_q = dtc*(q*dot(grad(phi),Fs)*dx
