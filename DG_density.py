@@ -2,18 +2,18 @@ from firedrake import *
 import math
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
-
+#mesh
 mesh = UnitSquareMesh(40, 40)
-
+#space
 V = FunctionSpace(mesh, "DG", 1)
 W = VectorFunctionSpace(mesh, "CG", 1)
 
 x, y = SpatialCoordinate(mesh)
-
+#velocity field
 velocity = as_vector(( (0.05*x - y+0.475 ) , ( x + 0.05*y-0.525)))
 u = Function(W).interpolate(velocity)
 
-
+#initial condition
 bell_r0 = 0.15; bell_x0 = 0.25; bell_y0 = 0.5
 cone_r0 = 0.15; cone_x0 = 0.5; cone_y0 = 0.25
 cyl_r0 = 0.15; cyl_x0 = 0.5; cyl_y0 = 0.75
@@ -28,55 +28,45 @@ slot_cyl = conditional(sqrt(pow(x-cyl_x0, 2) + pow(y-cyl_y0, 2)) < cyl_r0,
 rho = Function(V).interpolate(1.0 + bell + cone + slot_cyl)
 rho_init = Function(V).assign(rho)
 
-rhos = []
+q = Function(V).interpolate(1.0 + bell + cone + slot_cyl)
+q_init = Function(V).assign(q)
 
+
+#solution list
+rhos = []
+qs = []
+
+#time period
 T = 2*math.pi
 dt = T/1200
 dtc = Constant(dt)
 rho_in = Constant(1.0)
 
+q_in = Constant(1.0)
+
 drho_trial = TrialFunction(V)
+dq_trial = TrialFunction(V)
 phi = TestFunction(V)
 a = phi*drho_trial*dx
+b = phi*dq_trial*dx
 
+
+#elements
 n = FacetNormal(mesh)
 un = 0.5*(dot(u, n) + abs(dot(u, n)))
+Fn = 0.5*(dot(Fs, n) + abs(dot(Fs, n)))
 
-L1 = dtc*(rho*dot(grad(phi),u)*dx
+#variational problems for density
+L1_rho = dtc*(rho*dot(grad(phi),u)*dx
           - conditional(dot(u, n) < 0, phi*dot(u, n)*rho_in, 0.0)*ds
           - conditional(dot(u, n) > 0, phi*dot(u, n)*rho, 0.0)*ds
           - (phi('+') - phi('-'))*(un('+')*rho('+') - un('-')*rho('-'))*dS)
 
 
 rho1 = Function(V); rho2 = Function(V)
-L2 = replace(L1, {rho: rho1}); L3 = replace(L1, {rho: rho2})
+L2_rho = replace(L1_rho, {rho: rho1}); L3_rho = replace(L1_rho, {rho: rho2})
 
 drho = Function(V)
-
-params = {'ksp_type': 'preonly', 'pc_type': 'bjacobi', 'sub_pc_type': 'ilu'}
-prob1 = LinearVariationalProblem(a, L1, drho)
-solv1 = LinearVariationalSolver(prob1, solver_parameters=params)
-prob2 = LinearVariationalProblem(a, L2, drho)
-solv2 = LinearVariationalSolver(prob2, solver_parameters=params)
-prob3 = LinearVariationalProblem(a, L3, drho)
-solv3 = LinearVariationalSolver(prob3, solver_parameters=params)
-
-
-#Set Kuzmin limiter
-limiter = VertexBasedLimiter(V)
-
-t = 0.0
-step = 0
-output_freq = 20
-
-
-if step % output_freq == 0:
-    rhos.append(rho.copy(deepcopy=True))
-    print("t=", t)
-
-#Apply the limiter to q first.
-limiter.apply(rho)
-print(rho.dat.data.max())
 
 
 #Flux Problem
@@ -97,9 +87,9 @@ aFs = (
     + inner(wI,uI)*dx
     )
 LFs = (
-    2.0*(inner(wF('+'),n('+'))*un('+')*D('+') 
-         + inner(wF('-'),n('-'))*un('-')*D('-'))*dS
-    + inner(wI,u)*D*dx
+    2.0*(inner(wF('+'),n('+'))*un('+')*rho('+') 
+         + inner(wF('-'),n('-'))*un('-')*rho('-'))*dS
+    + inner(wI,u)*rho*dx
     )
 
 Fs = Function(W)
@@ -108,7 +98,46 @@ Fsproblem = LinearVariationalProblem(aFs, LFs, Fs)
 Fssolver = LinearVariationalSolver(Fsproblem)
 
 
-Fs=[]
+
+#variational problem for q
+L1_q = dtc*(q*dot(grad(phi),Fs)*dx
+          - conditional(dot(Fs, n) < 0, phi*dot(Fs, n)*q_in, 0.0)*ds
+          - conditional(dot(Fs, n) > 0, phi*dot(Fs, n)*q, 0.0)*ds
+          - (phi('+') - phi('-'))*(Fn('+')*q('+') - Fn('-')*q('-'))*dS)
+
+q1 = Function(V); q2 = Function(V)
+L2_q = replace(L1_q, {q: q1}); L3_q = replace(L1_q, {q: q2})
+
+
+
+
+params = {'ksp_type': 'preonly', 'pc_type': 'bjacobi', 'sub_pc_type': 'ilu'}
+prob1 = LinearVariationalProblem(a, L1_rho, drho)
+solv1 = LinearVariationalSolver(prob1, solver_parameters=params)
+prob2 = LinearVariationalProblem(a, L2_rho, drho)
+solv2 = LinearVariationalSolver(prob2, solver_parameters=params)
+prob3 = LinearVariationalProblem(a, L3_rho, drho)
+solv3 = LinearVariationalSolver(prob3, solver_parameters=params)
+
+
+#Set Kuzmin limiter
+limiter = VertexBasedLimiter(V)
+
+t = 0.0
+step = 0
+output_freq = 20
+
+
+if step % output_freq == 0:
+    rhos.append(rho.copy(deepcopy=True))
+    print("t=", t)
+
+#Apply the limiter to q first.
+limiter.apply(rho)
+print(rho.dat.data.max())
+
+
+
 
 
 #Main body
@@ -135,6 +164,8 @@ while t < T - 0.5*dt:
 
 
     Fssolver.solve()
+
+    Fs
 
 
 
@@ -165,7 +196,7 @@ def animate(q):
 
 interval = 1e3 * output_freq * dt
 animation = FuncAnimation(fig, animate, frames=rhos, interval=interval)
-try:
-    animation.save("DG_continuity_nondivfree3.mp4", writer="ffmpeg")
-except:
-    print("Failed to write movie! Try installing `ffmpeg`.")
+#try:
+    #animation.save("DG_continuity_nondivfree3.mp4", writer="ffmpeg")
+#except:
+    #print("Failed to write movie! Try installing `ffmpeg`.")
