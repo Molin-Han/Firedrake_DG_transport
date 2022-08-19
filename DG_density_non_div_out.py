@@ -48,26 +48,26 @@ a = phi*drho_trial*dx
 n = FacetNormal(mesh)
 un = 0.5*(dot(u, n) + abs(dot(u, n)))
 
-
+def both(vec):
+    return vec('+') + vec('-')
 #Courant number setting
 
-#DG0 = FunctionSpace(mesh, "DG", 0)
-#One = Function(DG0).assign(1.0)
-#unn = 0.5*(inner(-un, n) + abs(inner(-un, n))) # gives fluxes *into* cell only
-#v = TestFunction(DG0)
-#Courant_num = Function(DG0, name="Courant numerator")
-#Courant_num_form = dT*(
-#    both(unn*v)*(dS_v + dS_h)
-#    + unn*v*ds_tb
-#)
-#Courant_denom = Function(DG0, name="Courant denominator")
-#assemble(One*v*fd.dx, tensor=Courant_denom)
-#Courant = Function(DG0, name="Courant")
+DG0 = FunctionSpace(mesh, "DG", 0)
+One = Function(DG0).assign(1.0)
+v = TestFunction(DG0)
+Courant_num = Function(DG0, name="Courant numerator")
+Courant_num_form = dt*(
+    both(un*v)*(dS)
+    + un*v*ds
+)
+Courant_denom = Function(DG0, name="Courant denominator")
+assemble(One*v*dx, tensor=Courant_denom)
+Courant = Function(DG0, name="Courant")
 
 
-#assemble(Courant_num_form, tensor=Courant_num)
-#Courant.assign(Courant_num/Courant_denom)
-
+assemble(Courant_num_form, tensor=Courant_num)
+Courant.assign(Courant_num/Courant_denom)
+print(Courant)
 
 #variational problems for density
 L1_rho = dtc*(rho*dot(grad(phi),u)*dx

@@ -4,8 +4,8 @@ unn = 0.5*(fd.inner(-un, n) + abs(fd.inner(-un, n))) # gives fluxes *into* cell 
 v = fd.TestFunction(DG0)
 Courant_num = fd.Function(DG0, name="Courant numerator")
 Courant_num_form = dT*(
-    both(unn*v)*(fd.dS_v + fd.dS_h)
-    + unn*v*fd.ds_tb
+    both(unn*v)*(fd.dS)
+    + unn*v*fd.ds
 )
 Courant_denom = fd.Function(DG0, name="Courant denominator")
 fd.assemble(One*v*fd.dx, tensor=Courant_denom)
