@@ -126,7 +126,8 @@ Fs = Function(W)
 Fsproblem = LinearVariationalProblem(aFs, LFs, Fs)
 Fssolver = LinearVariationalSolver(Fsproblem)
 Fssolver.solve()
-Fn  = 0.5*(dot(Fs, n) + abs(dot(Fs, n)))
+Fsf,Fsi = split(Fs)
+Fn  = 0.5*(dot((Fsf+Fsi), n) + abs(dot((Fsf+Fsi), n)))
 
 #variational problem for q
 L1_q = dtc*(q*dot(grad(phi),Fs)*dx
