@@ -56,6 +56,35 @@ b = phi*dq_trial*dx
 n = FacetNormal(mesh)
 un = 0.5*(dot(u, n) + abs(dot(u, n)))
 
+
+#Courant number setting
+def both(vec):
+    return vec('+') + vec('-')
+
+
+DG0 = FunctionSpace(mesh, "DG", 0)
+One = Function(DG0).assign(1.0)
+v = TestFunction(DG0)
+Courant_num = Function(DG0, name="Courant numerator")
+Courant_num_form = dt*(
+    both(un*v)*(dS)
+    + un*v*ds
+)
+Courant_denom = Function(DG0, name="Courant denominator")
+assemble(One*v*dx, tensor=Courant_denom)
+Courant = Function(DG0, name="Courant")
+
+
+assemble(Courant_num_form, tensor=Courant_num)
+Courant.assign(Courant_num/Courant_denom)
+
+
+
+
+
+
+
+
 #variational problems for density
 L1_rho = dtc*(rho*dot(grad(phi),u)*dx
           - conditional(dot(u, n) < 0, phi*dot(u, n)*rho_in, 0.0)*ds
