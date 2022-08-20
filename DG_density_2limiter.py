@@ -67,7 +67,9 @@ Courant = Function(DG0, name="Courant")
 
 assemble(Courant_num_form, tensor=Courant_num)
 Courant.assign(Courant_num/Courant_denom)
-print(Courant)
+
+
+
 
 #variational problems for density
 L1_rho = dtc*(rho*dot(grad(phi),u)*dx
