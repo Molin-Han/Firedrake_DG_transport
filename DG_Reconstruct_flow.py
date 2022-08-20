@@ -41,7 +41,7 @@ D1solver.solve()
 
 # Surface Flux equation - build RT2 out of BDM1 and TDG1
 Fluxes = FunctionSpace(mesh,"BDM",1)
-Inners = FunctionSpace(mesh,"DRT",1)
+Inners = VectorFunctionSpace(mesh,"DG",0)
 W = MixedFunctionSpace((Fluxes,Inners))
 
 wI = TestFunction(Inners)
