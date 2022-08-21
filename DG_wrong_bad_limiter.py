@@ -31,7 +31,7 @@ q_init = Function(V).assign(q)
 
 qs = []
 T = 2*math.pi
-dt = T/1200
+dt = T/2400
 dtc = Constant(dt)
 q_in = Constant(1.0)
 

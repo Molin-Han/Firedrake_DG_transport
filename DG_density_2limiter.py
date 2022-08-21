@@ -70,7 +70,17 @@ Courant.assign(Courant_num/Courant_denom)
 
 #Set for the second limiter.
 beta = Function(DG0)
+beta1 = Function(DG0)
+beta2 = Function(DG0)
+
 rho_bar = Function(DG0)
+rho_hat_bar = Function(DG0)
+
+rho1_bar = Function(DG0)
+rho1_hat_bar = Function(DG0)
+
+rho2_bar = Function(DG0)
+rho2_hat_bar = Function(DG0)
 
 
 #variational problems for density
@@ -104,27 +114,66 @@ if step % output_freq == 0:
     rhos.append(rho.copy(deepcopy=True))
     print("t=", t)
 
-#Apply the limiter to q and density first.
+#Apply the limiter to q and density first and find beta.
+rho_bar.project(rho)
 limiter.apply(rho)
+rho_hat_bar.project(rho)
+beta.assign(max(0, min(1, (1 + Courant('-') - Courant('+')*rho_hat_bar/rho_bar)
+/(Courant('+') - Courant('+')*rho_hat_bar/rho_bar))))
+#apply the limiting scheme
+rho.project(rho_hat_bar + beta * (rho - rho_hat_bar))
 print(rho.dat.data.max())
 
 while t < T - 0.5*dt:
     #solve the density
+    #first stage
     solv1_rho.solve()
     rho1.assign(rho + drho)
+    rho1_bar.project(rho1)
     limiter.apply(rho1)
+    rho1_hat_bar.project(rho1)
+    beta1.assign(max(0, min(1, (1 + Courant('-') - Courant('+')*rho1_hat_bar/rho1_bar)
+    /(Courant('+') - Courant('+')*rho1_hat_bar/rho1_bar))))
+    #apply the limiting scheme
+    rho1.project(rho1_hat_bar + beta1 * (rho1 - rho1_hat_bar))
 
+    #second stage
     solv2_rho.solve()
     rho1.assign(rho1+drho)
     limiter.apply(rho1)
-    rho2.assign(0.75*rho + 0.25*(rho1))
-    limiter.apply(rho2)
+    rho1_hat_bar.project(rho1)
+    beta1.assign(max(0, min(1, (1 + Courant('-') - Courant('+')*rho1_hat_bar/rho1_bar)
+    /(Courant('+') - Courant('+')*rho1_hat_bar/rho1_bar))))
+    #apply the limiting scheme
+    rho1.project(rho1_hat_bar + beta1 * (rho1 - rho1_hat_bar))
 
+    rho2.assign(0.75*rho + 0.25*(rho1))
+    rho2_bar.project(rho2)
+    limiter.apply(rho2)
+    rho2_hat_bar.project(rho2)
+    beta2.assign(max(0, min(1, (1 + Courant('-') - Courant('+')*rho2_hat_bar/rho2_bar)
+    /(Courant('+') - Courant('+')*rho2_hat_bar/rho2_bar))))
+    #apply the limiting scheme
+    rho2.project(rho2_hat_bar + beta2 * (rho2 - rho2_hat_bar))
+
+    #third stage
     solv3_rho.solve()
     rho2.assign(rho2+drho)
     limiter.apply(rho2)
+    rho2_hat_bar.project(rho2)
+    beta2.assign(max(0, min(1, (1 + Courant('-') - Courant('+')*rho2_hat_bar/rho2_bar)
+    /(Courant('+') - Courant('+')*rho2_hat_bar/rho2_bar))))
+    #apply the limiting scheme
+    rho2.project(rho2_hat_bar + beta2 * (rho2 - rho2_hat_bar))
+
     rho.assign((1.0/3.0)*rho + (2.0/3.0)*(rho2))
+    rho_bar.project(rho)
     limiter.apply(rho)
+    rho_hat_bar.project(rho)
+    beta.assign(max(0, min(1, (1 + Courant('-') - Courant('+')*rho_hat_bar/rho_bar)
+    /(Courant('+') - Courant('+')*rho_hat_bar/rho_bar))))
+    #apply the limiting scheme
+    rho.project(rho_hat_bar + beta * (rho - rho_hat_bar))
 
     print(rho.dat.data.max())
 
