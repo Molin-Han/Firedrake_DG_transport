@@ -206,6 +206,6 @@ animation_rho = FuncAnimation(fig, animate, frames=rhos, interval=interval)
 
 
 try:
-    animation_rho.save("DG_rho_non-div_out.mp4", writer="ffmpeg")
+    animation_rho.save("DG_density_2limiters_1.mp4", writer="ffmpeg")
 except:
     print("Failed to write movie! Try installing `ffmpeg`.")
