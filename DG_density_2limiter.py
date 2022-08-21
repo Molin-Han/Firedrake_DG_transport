@@ -68,6 +68,10 @@ Courant = Function(DG0, name="Courant")
 assemble(Courant_num_form, tensor=Courant_num)
 Courant.assign(Courant_num/Courant_denom)
 
+#Set for the second limiter.
+beta = Function(DG0)
+rho_bar = Function(DG0)
+
 
 
 
