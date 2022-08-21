@@ -73,8 +73,6 @@ beta = Function(DG0)
 rho_bar = Function(DG0)
 
 
-
-
 #variational problems for density
 L1_rho = dtc*(rho*dot(grad(phi),u)*dx
           - conditional(dot(u, n) < 0, phi*dot(u, n)*rho_in, 0.0)*ds
