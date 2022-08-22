@@ -80,7 +80,7 @@ assemble(One*v*dx, tensor=Courant_denom_minus )
 Courant_minus  = Function(DG0)
 
 assemble(Courant_num_form_minus , tensor=Courant_num_minus )
-Courant_minus .assign(Courant_num_minus /Courant_denom_minus )
+Courant_minus.assign(Courant_num_minus /Courant_denom_minus )
 
 #Set for the second limiter.
 beta = Function(DG0)
