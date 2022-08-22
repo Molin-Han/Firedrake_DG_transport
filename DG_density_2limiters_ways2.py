@@ -55,32 +55,7 @@ def both(vec):
 DG0 = FunctionSpace(mesh, "DG", 0)
 One = Function(DG0).assign(1.0)
 v = TestFunction(DG0)
-#c+
-Courant_num_plus= Function(DG0)
-Courant_num_form_plus = dt*(
-    both(un*v)*(dS)
-    + un*v*ds
-)
-Courant_denom_plus = Function(DG0)
-assemble(One*v*dx, tensor=Courant_denom_plus)
-Courant_plus = Function(DG0)
 
-assemble(Courant_num_form_plus, tensor=Courant_num_plus)
-Courant_plus.assign(Courant_num_plus/Courant_denom_plus)
-
-
-#c-
-Courant_num_minus = Function(DG0)
-Courant_num_form_minus  = dt*(
-    both(-un*v)*(dS)
-    - un*v*ds
-)
-Courant_denom_minus  = Function(DG0)
-assemble(One*v*dx, tensor=Courant_denom_minus )
-Courant_minus  = Function(DG0)
-
-assemble(Courant_num_form_minus , tensor=Courant_num_minus )
-Courant_minus .assign(Courant_num_minus /Courant_denom_minus )
 
 #Set for the second limiter.
 beta = Function(DG0)
