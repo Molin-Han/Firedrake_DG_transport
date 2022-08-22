@@ -65,20 +65,47 @@ def both(vec):
 DG0 = FunctionSpace(mesh, "DG", 0)
 One = Function(DG0).assign(1.0)
 v = TestFunction(DG0)
-Courant_num = Function(DG0, name="Courant numerator")
-Courant_num_form = dt*(
+#c+
+Courant_num_plus= Function(DG0)
+Courant_num_form_plus = dt*(
     both(un*v)*(dS)
     + un*v*ds
 )
-Courant_denom = Function(DG0, name="Courant denominator")
-assemble(One*v*dx, tensor=Courant_denom)
-Courant = Function(DG0, name="Courant")
+Courant_denom_plus = Function(DG0)
+assemble(One*v*dx, tensor=Courant_denom_plus)
+Courant_plus = Function(DG0)
+
+assemble(Courant_num_form_plus, tensor=Courant_num_plus)
+Courant_plus.assign(Courant_num_plus/Courant_denom_plus)
 
 
-assemble(Courant_num_form, tensor=Courant_num)
-Courant.assign(Courant_num/Courant_denom)
+#c-
+Courant_num_minus = Function(DG0)
+Courant_num_form_minus  = dt*(
+    both(-un*v)*(dS)
+    - un*v*ds
+)
+Courant_denom_minus  = Function(DG0)
+assemble(One*v*dx, tensor=Courant_denom_minus )
+Courant_minus  = Function(DG0)
+
+assemble(Courant_num_form_minus , tensor=Courant_num_minus )
+Courant_minus.assign(Courant_num_minus /Courant_denom_minus )
 
 
+#Set for the second limiter.
+beta = Function(DG0)
+beta1 = Function(DG0)
+beta2 = Function(DG0)
+
+rho_bar = Function(DG0)
+rho_hat_bar = Function(DG0)
+
+rho1_bar = Function(DG0)
+rho1_hat_bar = Function(DG0)
+
+rho2_bar = Function(DG0)
+rho2_hat_bar = Function(DG0)
 
 
 
@@ -173,12 +200,17 @@ if step % output_freq == 0:
     rhos.append(rho.copy(deepcopy=True))
     print("t=", t)
 
-#Apply the limiter to q and density first.
-limiter.apply(rho)
-print(rho.dat.data.max())
-limiter.apply(q)
-print(q.dat.data.max())
 
+
+#Apply the limiter to q and density first and find beta.
+rho_bar.project(rho)
+limiter.apply(rho)
+rho_hat_bar.project(rho)
+beta.assign(max(0, min(1, (1 + Courant_minus - Courant_plus*rho_hat_bar/rho_bar)
+/(Courant_plus - Courant_plus*rho_hat_bar/rho_bar))))
+#apply the limiting scheme
+rho.project(rho_hat_bar + beta * (rho - rho_hat_bar))
+print(rho.dat.data.max())
 
 
 
@@ -186,21 +218,54 @@ print(q.dat.data.max())
 
 while t < T - 0.5*dt:
     #solve the density
+    #first stage
     solv1_rho.solve()
     rho1.assign(rho + drho)
+    rho1_bar.project(rho1)
     limiter.apply(rho1)
+    rho1_hat_bar.project(rho1)
+    beta1.assign(max(0, min(1, (1 + Courant_minus - Courant_plus*rho1_hat_bar/rho1_bar)
+    /(Courant_plus - Courant_plus*rho1_hat_bar/rho1_bar))))
+    #apply the limiting scheme
+    rho1.project(rho1_hat_bar + beta1 * (rho1 - rho1_hat_bar))
 
+    #second stage
     solv2_rho.solve()
     rho1.assign(rho1+drho)
     limiter.apply(rho1)
-    rho2.assign(0.75*rho + 0.25*(rho1))
-    limiter.apply(rho2)
+    rho1_hat_bar.project(rho1)
+    beta1.assign(max(0, min(1, (1 + Courant_minus - Courant_plus*rho1_hat_bar/rho1_bar)
+    /(Courant_plus - Courant_plus*rho1_hat_bar/rho1_bar))))
+    #apply the limiting scheme
+    rho1.project(rho1_hat_bar + beta1 * (rho1 - rho1_hat_bar))
 
+    rho2.assign(0.75*rho + 0.25*(rho1))
+    rho2_bar.project(rho2)
+    limiter.apply(rho2)
+    rho2_hat_bar.project(rho2)
+    beta2.assign(max(0, min(1, (1 + Courant_minus - Courant_plus*rho2_hat_bar/rho2_bar)
+    /(Courant_plus - Courant_plus * rho2_hat_bar/rho2_bar))))
+    #apply the limiting scheme
+    rho2.project(rho2_hat_bar + beta2 * (rho2 - rho2_hat_bar))
+
+    #third stage
     solv3_rho.solve()
     rho2.assign(rho2+drho)
     limiter.apply(rho2)
+    rho2_hat_bar.project(rho2)
+    beta2.assign(max(0, min(1, (1 + Courant_minus - Courant_plus*rho2_hat_bar/rho2_bar)
+    /(Courant_plus - Courant_plus*rho2_hat_bar/rho2_bar))))
+    #apply the limiting scheme
+    rho2.project(rho2_hat_bar + beta2 * (rho2 - rho2_hat_bar))
+
     rho.assign((1.0/3.0)*rho + (2.0/3.0)*(rho2))
+    rho_bar.project(rho)
     limiter.apply(rho)
+    rho_hat_bar.project(rho)
+    beta.assign(max(0, min(1, (1 + Courant_minus - Courant_plus*rho_hat_bar/rho_bar)
+    /(Courant_plus - Courant_plus*rho_hat_bar/rho_bar))))
+    #apply the limiting scheme
+    rho.project(rho_hat_bar + beta * (rho - rho_hat_bar))
 
 
     print(rho.dat.data.max())
@@ -208,6 +273,9 @@ while t < T - 0.5*dt:
     #solve the flux problem
     Fssolver.solve()
 
+
+    #solve the advection equation for q
+    #have not applied the limiting scheme yet.
     solv1_q.solve()
     q1.assign(q + dq)
     limiter.apply(q1)

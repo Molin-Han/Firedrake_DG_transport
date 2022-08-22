@@ -48,14 +48,35 @@ a = phi*drho_trial*dx
 n = FacetNormal(mesh)
 un = 0.5*(dot(u, n) + abs(dot(u, n)))
 
-def both(vec):
-    return vec('+') + vec('-')
+def H(vec):
+    if vec > 0:
+        return 1
+    else:
+        return 0
 #Courant number setting
 
 DG0 = FunctionSpace(mesh, "DG", 0)
 One = Function(DG0).assign(1.0)
 v = TestFunction(DG0)
 
+Courant_plus = Function(DG0)
+Courant_minus = Function(DG0)
+
+
+a_plus = v * Courant_plus * dx
+a_minus = v * Courant_minus * dx
+
+L_plus = dtc * v * (-dot(u,n)*H(-dot(u,n)))*ds
+L_minus = dtc * v * (dot(u,n)*H(dot(u,n)))*ds
+
+params = {'ksp_type': 'preonly', 'pc_type': 'bjacobi', 'sub_pc_type': 'ilu'}
+prob_plus = LinearVariationalProblem(a_plus, L_plus)
+solv_plus = LinearVariationalSolver(prob_plus, solver_parameters=params)
+prob_minus = LinearVariationalProblem(a_minus, L_minus)
+solv_minus = LinearVariationalSolver(prob_minus, solver_parameters=params)
+
+solv_plus.solve()
+solv_minus.solve() 
 
 #Set for the second limiter.
 beta = Function(DG0)
