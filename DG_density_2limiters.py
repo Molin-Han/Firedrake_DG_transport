@@ -132,7 +132,7 @@ if step % output_freq == 0:
 rho_bar.project(rho)
 limiter.apply(rho)
 rho_hat_bar.project(rho)
-beta.assign(max(0, min(1, (1 + Courant_minus - Courant_plus*rho_hat_bar/rho_bar)
+beta.assign(Max(0, Min(1, (1 + Courant_minus - Courant_plus*rho_hat_bar/rho_bar)
 /(Courant_plus - Courant_plus*rho_hat_bar/rho_bar))))
 #apply the limiting scheme
 rho.project(rho_hat_bar + beta * (rho - rho_hat_bar))
@@ -146,7 +146,7 @@ while t < T - 0.5*dt:
     rho1_bar.project(rho1)
     limiter.apply(rho1)
     rho1_hat_bar.project(rho1)
-    beta1.assign(max(0, min(1, (1 + Courant_minus - Courant_plus*rho1_hat_bar/rho1_bar)
+    beta1.assign(Max(0, Min(1, (1 + Courant_minus - Courant_plus*rho1_hat_bar/rho1_bar)
     /(Courant_plus - Courant_plus*rho1_hat_bar/rho1_bar))))
     #apply the limiting scheme
     rho1.project(rho1_hat_bar + beta1 * (rho1 - rho1_hat_bar))
@@ -156,7 +156,7 @@ while t < T - 0.5*dt:
     rho1.assign(rho1+drho)
     limiter.apply(rho1)
     rho1_hat_bar.project(rho1)
-    beta1.assign(max(0, min(1, (1 + Courant_minus - Courant_plus*rho1_hat_bar/rho1_bar)
+    beta1.assign(Max(0, Min(1, (1 + Courant_minus - Courant_plus*rho1_hat_bar/rho1_bar)
     /(Courant_plus - Courant_plus*rho1_hat_bar/rho1_bar))))
     #apply the limiting scheme
     rho1.project(rho1_hat_bar + beta1 * (rho1 - rho1_hat_bar))
@@ -165,7 +165,7 @@ while t < T - 0.5*dt:
     rho2_bar.project(rho2)
     limiter.apply(rho2)
     rho2_hat_bar.project(rho2)
-    beta2.assign(max(0, min(1, (1 + Courant_minus - Courant_plus*rho2_hat_bar/rho2_bar)
+    beta2.assign(Max(0, Min(1, (1 + Courant_minus - Courant_plus*rho2_hat_bar/rho2_bar)
     /(Courant_plus - Courant_plus * rho2_hat_bar/rho2_bar))))
     #apply the limiting scheme
     rho2.project(rho2_hat_bar + beta2 * (rho2 - rho2_hat_bar))
@@ -175,7 +175,7 @@ while t < T - 0.5*dt:
     rho2.assign(rho2+drho)
     limiter.apply(rho2)
     rho2_hat_bar.project(rho2)
-    beta2.assign(max(0, min(1, (1 + Courant_minus - Courant_plus*rho2_hat_bar/rho2_bar)
+    beta2.assign(Max(0, Min(1, (1 + Courant_minus - Courant_plus*rho2_hat_bar/rho2_bar)
     /(Courant_plus - Courant_plus*rho2_hat_bar/rho2_bar))))
     #apply the limiting scheme
     rho2.project(rho2_hat_bar + beta2 * (rho2 - rho2_hat_bar))
@@ -184,7 +184,7 @@ while t < T - 0.5*dt:
     rho_bar.project(rho)
     limiter.apply(rho)
     rho_hat_bar.project(rho)
-    beta.assign(max(0, min(1, (1 + Courant_minus - Courant_plus*rho_hat_bar/rho_bar)
+    beta.assign(Max(0, Min(1, (1 + Courant_minus - Courant_plus*rho_hat_bar/rho_bar)
     /(Courant_plus - Courant_plus*rho_hat_bar/rho_bar))))
     #apply the limiting scheme
     rho.project(rho_hat_bar + beta * (rho - rho_hat_bar))
