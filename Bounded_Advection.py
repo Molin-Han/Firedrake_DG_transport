@@ -270,7 +270,7 @@ while t < T - 0.5*dt:
 
     print(rho.dat.data.max())
 
-    #solve the flux problem
+    #solve the flux problem(each stage)
     Fssolver.solve()
 
 
