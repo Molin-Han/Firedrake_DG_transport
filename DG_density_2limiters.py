@@ -44,6 +44,10 @@ drho_trial = TrialFunction(V)
 phi = TestFunction(V)
 a = phi*drho_trial*dx
 
+#Set Kuzmin limiter
+limiter = VertexBasedLimiter(V)
+
+
 #elements
 n = FacetNormal(mesh)
 un = 0.5*(dot(u, n) + abs(dot(u, n)))
@@ -62,8 +66,11 @@ Courant_num_form_plus = dt*(
     + un*v*ds
 )
 Courant_denom_plus = Function(DG0)
-assemble(One*v*dx, tensor=Courant_denom_plus)
 Courant_plus = Function(DG0)
+
+
+assemble(One*v*dx, tensor=Courant_denom_plus)
+
 
 assemble(Courant_num_form_plus, tensor=Courant_num_plus)
 Courant_plus.assign(Courant_num_plus/Courant_denom_plus)
@@ -76,8 +83,11 @@ Courant_num_form_minus  = dt*(
     - un*v*ds
 )
 Courant_denom_minus  = Function(DG0)
-assemble(One*v*dx, tensor=Courant_denom_minus )
 Courant_minus  = Function(DG0)
+
+
+assemble(One*v*dx, tensor=Courant_denom_minus )
+
 
 assemble(Courant_num_form_minus , tensor=Courant_num_minus )
 Courant_minus.assign(Courant_num_minus /Courant_denom_minus )
@@ -96,6 +106,14 @@ rho1_hat_bar = Function(DG0)
 rho2_bar = Function(DG0)
 rho2_hat_bar = Function(DG0)
 
+
+#rho_hat = Function(DG0)
+#rho_hat.assign(limiter.apply(rho))
+#c_plus = Courant_plus * rho_hat / rho_hat_bar
+#c_minus = Courant_minus * rho_hat / rho_hat_bar
+
+#beta_expr_colin = Max(0, Min(1, (1 + c_minus - Courant_plus) / (c_plus - Courant_plus)))
+#beta_expr_molin = Max(0, Min(1, (1 + Courant_minus - Courant_plus) / (c_minus - c_plus - Courant_minus + Courant_plus)))
 
 #variational problems for density
 L1_rho = dtc*(rho*dot(grad(phi),u)*dx
@@ -118,8 +136,7 @@ prob3_rho = LinearVariationalProblem(a, L3_rho, drho)
 solv3_rho = LinearVariationalSolver(prob3_rho, solver_parameters=params)
 
 
-#Set Kuzmin limiter
-limiter = VertexBasedLimiter(V)
+
 
 t = 0.0
 step = 0
@@ -132,32 +149,57 @@ if step % output_freq == 0:
 rho_bar.project(rho)
 limiter.apply(rho)
 rho_hat_bar.project(rho)
-beta.assign(Max(0, Min(1, (1 + Courant_minus - Courant_plus*rho_hat_bar/rho_bar)
-/(Courant_plus - Courant_plus*rho_hat_bar/rho_bar))))
+#here rho is rho_hat as the limiter is applied
+beta.assign(Max(0, Min(1, (1 + Courant_minus - Courant_plus)
+/(Courant_minus * rho / rho_hat_bar - Courant_plus*rho / rho_hat_bar - Courant_minus + Courant_plus))))
 #apply the limiting scheme
 rho.project(rho_hat_bar + beta * (rho - rho_hat_bar))
 print(rho.dat.data.max())
+print(rho.dat.data.min())
 
 while t < T - 0.5*dt:
     #solve the density
     #first stage
     solv1_rho.solve()
     rho1.assign(rho + drho)
+
+    #Courant number should be recalculated
+    #c+
+    assemble(One*v*dx, tensor=Courant_denom_plus)
+    assemble(Courant_num_form_plus, tensor=Courant_num_plus)
+    Courant_plus.assign(Courant_num_plus/Courant_denom_plus)
+    #c-
+    assemble(One*v*dx, tensor=Courant_denom_minus )
+    assemble(Courant_num_form_minus , tensor=Courant_num_minus )
+    Courant_minus.assign(Courant_num_minus /Courant_denom_minus )
+
+    #rho limiting scheme, beta1 found.
     rho1_bar.project(rho1)
     limiter.apply(rho1)
     rho1_hat_bar.project(rho1)
-    beta1.assign(Max(0, Min(1, (1 + Courant_minus - Courant_plus*rho1_hat_bar/rho1_bar)
-    /(Courant_plus - Courant_plus*rho1_hat_bar/rho1_bar))))
+    beta1.assign(Max(0, Min(1, (1 + Courant_minus - Courant_plus)
+    /(Courant_minus * rho1 / rho1_hat_bar - Courant_plus*rho1 / rho1_hat_bar - Courant_minus + Courant_plus))))
     #apply the limiting scheme
     rho1.project(rho1_hat_bar + beta1 * (rho1 - rho1_hat_bar))
 
     #second stage
     solv2_rho.solve()
     rho1.assign(rho1+drho)
+    #Courant number should be recalculated
+    #c+
+    assemble(One*v*dx, tensor=Courant_denom_plus)
+    assemble(Courant_num_form_plus, tensor=Courant_num_plus)
+    Courant_plus.assign(Courant_num_plus/Courant_denom_plus)
+    #c-
+    assemble(One*v*dx, tensor=Courant_denom_minus )
+    assemble(Courant_num_form_minus , tensor=Courant_num_minus )
+    Courant_minus.assign(Courant_num_minus /Courant_denom_minus )
+
+    #limiter apply to rho1 another time.
     limiter.apply(rho1)
     rho1_hat_bar.project(rho1)
-    beta1.assign(Max(0, Min(1, (1 + Courant_minus - Courant_plus*rho1_hat_bar/rho1_bar)
-    /(Courant_plus - Courant_plus*rho1_hat_bar/rho1_bar))))
+    beta1.assign(Max(0, Min(1, (1 + Courant_minus - Courant_plus)
+    /(Courant_minus * rho1 / rho1_hat_bar - Courant_plus*rho1 / rho1_hat_bar - Courant_minus + Courant_plus))))
     #apply the limiting scheme
     rho1.project(rho1_hat_bar + beta1 * (rho1 - rho1_hat_bar))
 
@@ -190,6 +232,7 @@ while t < T - 0.5*dt:
     rho.project(rho_hat_bar + beta * (rho - rho_hat_bar))
 
     print(rho.dat.data.max())
+    print(rho.dat.data.min())
 
 
     step += 1
