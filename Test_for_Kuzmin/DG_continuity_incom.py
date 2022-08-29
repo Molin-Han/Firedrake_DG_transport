@@ -50,8 +50,3 @@ un = 0.5*(dot(u, n) + abs(dot(u, n)))
 
 
 
-
-
-L1
-L2
-L3
