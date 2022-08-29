@@ -49,10 +49,7 @@ n = FacetNormal(mesh)
 un = 0.5*(dot(u, n) + abs(dot(u, n)))
 
 def H(vec):
-    if vec > 0:
-        return 1
-    else:
-        return 0
+    conditional(vec>0, 1.0, 0.0)
 #Courant number setting
 
 DG0 = FunctionSpace(mesh, "DG", 0)
