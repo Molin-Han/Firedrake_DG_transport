@@ -176,7 +176,7 @@ dq = Function(V)
 
 
 
-
+# set solvers for rho and q.
 params = {'ksp_type': 'preonly', 'pc_type': 'bjacobi', 'sub_pc_type': 'ilu'}
 prob1_rho = LinearVariationalProblem(a, L1_rho, drho)
 solv1_rho = LinearVariationalSolver(prob1_rho, solver_parameters=params)
