@@ -2,18 +2,21 @@ from firedrake import *
 import math
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
+
 #mesh
 mesh = UnitSquareMesh(40, 40)
+
 #space
 V = FunctionSpace(mesh, "DG", 1)
 W = VectorFunctionSpace(mesh, "CG", 1)
 
 x, y = SpatialCoordinate(mesh)
+#Initial setting for the problem
 #velocity field
 velocity = as_vector(( (0.05*x - y+0.475 ) , ( x + 0.05*y-0.525)))
 u = Function(W).interpolate(velocity)
 
-#initial condition
+#initial condition for the atomsphere
 bell_r0 = 0.15; bell_x0 = 0.25; bell_y0 = 0.5
 cone_r0 = 0.15; cone_x0 = 0.5; cone_y0 = 0.25
 cyl_r0 = 0.15; cyl_x0 = 0.5; cyl_y0 = 0.75
@@ -37,6 +40,7 @@ q_init = Function(V).assign(q)
 rhos = []
 qs = []
 
+#Initial setting for time
 #time period
 T = 2*math.pi
 dt = T/1200
@@ -45,6 +49,8 @@ rho_in = Constant(1.0)
 
 q_in = Constant(1.0)
 
+
+#trial functions and test functions
 drho_trial = TrialFunction(V)
 dq_trial = TrialFunction(V)
 phi = TestFunction(V)
@@ -62,50 +68,52 @@ def both(vec):
     return vec('+') + vec('-')
 
 
-DG0 = FunctionSpace(mesh, "DG", 0)
-One = Function(DG0).assign(1.0)
-v = TestFunction(DG0)
+DG1 = FunctionSpace(mesh, "DG", 1)
+One = Function(DG1).assign(1.0)
+v = TestFunction(DG1)
 #c+
-Courant_num_plus= Function(DG0)
+Courant_num_plus= Function(DG1)
 Courant_num_form_plus = dt*(
     both(un*v)*(dS)
     + un*v*ds
 )
-Courant_denom_plus = Function(DG0)
-assemble(One*v*dx, tensor=Courant_denom_plus)
-Courant_plus = Function(DG0)
+Courant_denom_plus = Function(DG1)
+Courant_plus = Function(DG1)
 
+
+assemble(One*v*dx, tensor=Courant_denom_plus)
 assemble(Courant_num_form_plus, tensor=Courant_num_plus)
 Courant_plus.assign(Courant_num_plus/Courant_denom_plus)
 
 
 #c-
-Courant_num_minus = Function(DG0)
+Courant_num_minus = Function(DG1)
 Courant_num_form_minus  = dt*(
     both(-un*v)*(dS)
     - un*v*ds
 )
-Courant_denom_minus  = Function(DG0)
-assemble(One*v*dx, tensor=Courant_denom_minus )
-Courant_minus  = Function(DG0)
+Courant_denom_minus  = Function(DG1)
+Courant_minus  = Function(DG1)
 
+
+assemble(One*v*dx, tensor=Courant_denom_minus )
 assemble(Courant_num_form_minus , tensor=Courant_num_minus )
 Courant_minus.assign(Courant_num_minus /Courant_denom_minus )
 
 
 #Set for the second limiter.
-beta = Function(DG0)
-beta1 = Function(DG0)
-beta2 = Function(DG0)
+beta = Function(DG1)
+beta1 = Function(DG1)
+beta2 = Function(DG1)
 
-rho_bar = Function(DG0)
-rho_hat_bar = Function(DG0)
+rho_bar = Function(DG1)
+rho_hat_bar = Function(DG1)
 
-rho1_bar = Function(DG0)
-rho1_hat_bar = Function(DG0)
+rho1_bar = Function(DG1)
+rho1_hat_bar = Function(DG1)
 
-rho2_bar = Function(DG0)
-rho2_hat_bar = Function(DG0)
+rho2_bar = Function(DG1)
+rho2_hat_bar = Function(DG1)
 
 
 

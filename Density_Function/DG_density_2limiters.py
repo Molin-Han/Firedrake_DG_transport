@@ -10,11 +10,12 @@ V = FunctionSpace(mesh, "DG", 1)
 W = VectorFunctionSpace(mesh, "CG", 1)
 
 x, y = SpatialCoordinate(mesh)
+#Initial setting for the problem.
 #velocity field
 velocity = as_vector(( (-0.05*x - y+0.475 ) , ( x - 0.05*y-0.525)))
 u = Function(W).interpolate(velocity)
 
-#initial condition
+#initial condition for the atomsphere
 bell_r0 = 0.15; bell_x0 = 0.25; bell_y0 = 0.5
 cone_r0 = 0.15; cone_x0 = 0.5; cone_y0 = 0.25
 cyl_r0 = 0.15; cyl_x0 = 0.5; cyl_y0 = 0.75
@@ -70,8 +71,6 @@ Courant_plus = Function(DG1)
 
 
 assemble(One*v*dx, tensor=Courant_denom_plus)
-
-
 assemble(Courant_num_form_plus, tensor=Courant_num_plus)
 Courant_plus.assign(Courant_num_plus/Courant_denom_plus)
 
@@ -87,8 +86,6 @@ Courant_minus  = Function(DG1)
 
 
 assemble(One*v*dx, tensor=Courant_denom_minus )
-
-
 assemble(Courant_num_form_minus , tensor=Courant_num_minus )
 Courant_minus.assign(Courant_num_minus /Courant_denom_minus )
 
