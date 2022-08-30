@@ -12,7 +12,8 @@ W = VectorFunctionSpace(mesh, "CG", 1)
 x, y = SpatialCoordinate(mesh)
 #Initial setting for the problem.
 #velocity field
-velocity = as_vector(( (-0.05*x - y+0.475 ) , ( x - 0.05*y-0.525)))
+#velocity = as_vector(( (-0.05*x - y+0.475 ) , ( x - 0.05*y-0.525)))
+velocity = as_vector(( (0.5 - y ) , ( x - 0.5)))
 u = Function(W).interpolate(velocity)
 
 #initial condition for the atomsphere
@@ -278,6 +279,6 @@ animation_rho = FuncAnimation(fig, animate, frames=rhos, interval=interval)
 
 
 try:
-    animation_rho.save("DG_density_2limiters_2.mp4", writer="ffmpeg")
+    animation_rho.save("DG_density_2limiters_simple_test.mp4", writer="ffmpeg")
 except:
     print("Failed to write movie! Try installing `ffmpeg`.")
