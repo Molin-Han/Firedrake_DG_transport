@@ -104,12 +104,12 @@ rho2_bar = Function(DG1)
 rho2_hat_bar = Function(DG1)
 
 
+#set for the expression for beta
+c_plus = Courant_plus * rho / rho_hat_bar
+c_minus = Courant_minus * rho / rho_hat_bar
 
-#c_plus = Courant_plus * rho_hat / rho_hat_bar
-#c_minus = Courant_minus * rho_hat / rho_hat_bar
-
-#beta_expr_colin = Max(0, Min(1, (1 + c_minus - Courant_plus) / (c_plus - Courant_plus)))
-#beta_expr_molin = Max(0, Min(1, (1 + Courant_minus - Courant_plus) / (c_minus - c_plus - Courant_minus + Courant_plus)))
+beta_expr_colin = Max(0, Min(1, (1 + c_minus - Courant_plus) / (c_plus - Courant_plus)))
+beta_expr_molin = Max(0, Min(1, (1 + Courant_minus - Courant_plus)/(c_minus - c_plus - Courant_minus + Courant_plus)))
 
 #variational problems for density
 L1_rho = dtc*(rho*dot(grad(phi),u)*dx
@@ -147,9 +147,7 @@ rho_bar.project(rho)
 limiter.apply(rho)
 rho_hat_bar.project(rho)
 #here rho is rho_hat as the limiter is applied
-#beta.assign(Max(0, Min(1, (1 + Courant_minus - Courant_plus*rho_hat_bar/rho_bar)
-#/(Courant_plus - Courant_plus*rho_hat_bar/rho_bar))))
-beta.assign(Max(0, Min(1, (1 + Courant_minus - Courant_plus)/(Courant_minus * rho / rho_hat_bar - Courant_plus * rho / rho_hat_bar - Courant_minus + Courant_plus))))
+beta.assign(beta_expr_molin)
 #apply the limiting scheme
 rho.project(rho_hat_bar + beta * (rho - rho_hat_bar))
 print(rho.dat.data.max())
