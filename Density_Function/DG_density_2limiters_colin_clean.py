@@ -90,6 +90,9 @@ assemble(Courant_num_form_minus , tensor=Courant_num_minus )
 Courant_minus.assign(Courant_num_minus /Courant_denom_minus )
 
 #Set for the second limiter.
+
+rho1 = Function(V); rho2 = Function(V)
+
 beta = Function(DG1)
 beta1 = Function(DG1)
 beta2 = Function(DG1)
@@ -108,8 +111,20 @@ rho2_hat_bar = Function(DG1)
 c_plus = Courant_plus * rho / rho_hat_bar
 c_minus = Courant_minus * rho / rho_hat_bar
 
+c1_plus = Courant_plus * rho1 / rho1_hat_bar
+c1_minus = Courant_minus * rho1 / rho1_hat_bar
+
+c2_plus = Courant_plus * rho2 / rho2_hat_bar
+c2_minus = Courant_minus * rho2 / rho2_hat_bar
+
 beta_expr_colin = Max(0, Min(1, (1 + c_minus - Courant_plus) / (c_plus - Courant_plus)))
 beta_expr_molin = Max(0, Min(1, (1 + Courant_minus - Courant_plus)/(c_minus - c_plus - Courant_minus + Courant_plus)))
+
+beta1_expr_molin = Max(0, Min(1, (1 + Courant_minus - Courant_plus)/(c1_minus - c1_plus - Courant_minus + Courant_plus)))
+beta1_expr_colin = Max(0, Min(1, (1 + c1_minus - Courant_plus) / (c1_plus - Courant_plus)))
+
+beta2_expr_molin = Max(0, Min(1, (1 + Courant_minus - Courant_plus)/(c2_minus - c2_plus - Courant_minus + Courant_plus)))
+beta2_expr_colin = Max(0, Min(1, (1 + c2_minus - Courant_plus) / (c2_plus - Courant_plus)))
 
 #variational problems for density
 L1_rho = dtc*(rho*dot(grad(phi),u)*dx
@@ -118,7 +133,7 @@ L1_rho = dtc*(rho*dot(grad(phi),u)*dx
           - (phi('+') - phi('-'))*(un('+')*rho('+') - un('-')*rho('-'))*dS)
 
 
-rho1 = Function(V); rho2 = Function(V)
+
 L2_rho = replace(L1_rho, {rho: rho1}); L3_rho = replace(L1_rho, {rho: rho2})
 
 drho = Function(V)
@@ -147,7 +162,8 @@ rho_bar.project(rho)
 limiter.apply(rho)
 rho_hat_bar.project(rho)
 #here rho is rho_hat as the limiter is applied
-beta.assign(beta_expr_molin)
+#beta.assign(beta_expr_molin)
+beta.assign(beta_expr_colin)
 #apply the limiting scheme
 rho.project(rho_hat_bar + beta * (rho - rho_hat_bar))
 print(rho.dat.data.max())
@@ -175,8 +191,8 @@ while t < T - 0.5*dt:
     rho1_bar.project(rho1)
     limiter.apply(rho1)
     rho1_hat_bar.project(rho1)
-    beta1.assign(Max(0, Min(1, (1 + Courant_minus - Courant_plus)
-    /(Courant_minus * rho1 / rho1_hat_bar - Courant_plus*rho1 / rho1_hat_bar - Courant_minus + Courant_plus))))
+    #beta1.assign(beta1_expr_molin)
+    beta1.assign(beta1_expr_colin)
     #apply the limiting scheme
     rho1.project(rho1_hat_bar + beta1 * (rho1 - rho1_hat_bar))
 
@@ -197,8 +213,8 @@ while t < T - 0.5*dt:
     #limiter apply to rho1 another time.
     limiter.apply(rho1)
     rho1_hat_bar.project(rho1)
-    beta1.assign(Max(0, Min(1, (1 + Courant_minus - Courant_plus)
-    /(Courant_minus * rho1 / rho1_hat_bar - Courant_plus*rho1 / rho1_hat_bar - Courant_minus + Courant_plus))))
+    #beta1.assign(beta1_expr_molin)
+    beta1.assign(beta1_expr_colin)
     #apply the limiting scheme
     rho1.project(rho1_hat_bar + beta1 * (rho1 - rho1_hat_bar))
     
@@ -207,8 +223,8 @@ while t < T - 0.5*dt:
     rho2_bar.project(rho2)
     limiter.apply(rho2)
     rho2_hat_bar.project(rho2)
-    beta2.assign(Max(0, Min(1, (1 + Courant_minus - Courant_plus)
-    /(Courant_minus * rho2 / rho2_hat_bar - Courant_plus*rho2 / rho2_hat_bar - Courant_minus + Courant_plus))))
+    #beta2.assign(beta2_expr_molin)
+    beta2.assign(beta2_expr_colin)
     #apply the limiting scheme
     rho2.project(rho2_hat_bar + beta2 * (rho2 - rho2_hat_bar))
 
@@ -229,8 +245,8 @@ while t < T - 0.5*dt:
     #limiter apply to rho2 another time.
     limiter.apply(rho2)
     rho2_hat_bar.project(rho2)
-    beta2.assign(Max(0, Min(1, (1 + Courant_minus - Courant_plus)
-    /(Courant_minus * rho2 / rho2_hat_bar - Courant_plus*rho2 / rho2_hat_bar - Courant_minus + Courant_plus))))
+    #beta2.assign(beta2_expr_molin)
+    beta2.assign(beta2_expr_colin)
     #apply the limiting scheme
     rho2.project(rho2_hat_bar + beta2 * (rho2 - rho2_hat_bar))
 
@@ -239,8 +255,8 @@ while t < T - 0.5*dt:
     rho_bar.project(rho)
     limiter.apply(rho)
     rho_hat_bar.project(rho)
-    beta.assign(Max(0, Min(1, (1 + Courant_minus - Courant_plus)
-    /(Courant_minus * rho / rho_hat_bar - Courant_plus*rho / rho_hat_bar - Courant_minus + Courant_plus))))
+    #beta.assign(beta_expr_molin)
+    beta.assign(beta_expr_colin)
     #apply the limiting scheme
     rho.project(rho_hat_bar + beta * (rho - rho_hat_bar))
 
@@ -276,6 +292,6 @@ animation_rho = FuncAnimation(fig, animate, frames=rhos, interval=interval)
 
 
 try:
-    animation_rho.save("DG_density_2limiters_2.mp4", writer="ffmpeg")
+    animation_rho.save("DG_density_2limiters_colin.mp4", writer="ffmpeg")
 except:
     print("Failed to write movie! Try installing `ffmpeg`.")
