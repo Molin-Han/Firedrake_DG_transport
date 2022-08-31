@@ -289,13 +289,15 @@ q_minus_form = both(Fn * w) * dS + Fn * w *ds
 assemble(q_minus_form, tensor=q_minus_num)
 q_minus.assign((1/c_minus) * q_minus_num)
 
+qmax = Constant(1.0)
+
 
 #set alpha
-alpha_expr = Min(1, ((1 + c_minus - c_plus)* Max(q) - q_hat_bar * (1 - c_plus) - c_minus * q_minus) / (c_plus * (q_hat_bar - q_plus)))
+alpha_expr = Min(1, ((1 + c_minus - c_plus)* qmax - q_hat_bar * (1 - c_plus) - c_minus * q_minus) / (c_plus * (q_hat_bar - q_plus)))
 
-alpha1_expr = Min(1, ((1 + c_minus - c_plus)* Max(q1) - q1_hat_bar * (1 - c_plus) - c_minus * q_minus) / (c_plus * (q1_hat_bar - q_plus)))
+alpha1_expr = Min(1, ((1 + c_minus - c_plus)* qmax - q1_hat_bar * (1 - c_plus) - c_minus * q_minus) / (c_plus * (q1_hat_bar - q_plus)))
 
-alpha2_expr = Min(1, ((1 + c_minus - c_plus)* Max(q2) - q2_hat_bar * (1 - c_plus) - c_minus * q_minus) / (c_plus * (q2_hat_bar - q_plus)))
+alpha2_expr = Min(1, ((1 + c_minus - c_plus)* qmax - q2_hat_bar * (1 - c_plus) - c_minus * q_minus) / (c_plus * (q2_hat_bar - q_plus)))
 
 
 #variational problem for q
