@@ -369,7 +369,9 @@ while t < T - 0.5*dt:
     Fssolver1.solve()
 
     #For q_1
-
+    solv1_q.solve()
+    q1.assign(q + dq)
+    limiter.apply(q1)
 
 
 
@@ -413,7 +415,11 @@ while t < T - 0.5*dt:
 
 
     #For q_2
-
+    solv2_q.solve()
+    q1.assign(q1+dq)
+    limiter.apply(q1)
+    q2.assign(0.75*q + 0.25*(q1))
+    limiter.apply(q2)
 
 
 
@@ -463,26 +469,12 @@ while t < T - 0.5*dt:
 
 
     #For q
-
-
-
-    #solve the advection equation for q
-    #have not applied the limiting scheme yet.
-    solv1_q.solve()
-    q1.assign(q + dq)
-    limiter.apply(q1)
-
-    solv2_q.solve()
-    q1.assign(q1+dq)
-    limiter.apply(q1)
-    q2.assign(0.75*q + 0.25*(q1))
-    limiter.apply(q2)
-
     solv3_q.solve()
     q2.assign(q2+dq)
     limiter.apply(q2)
     q.assign((1.0/3.0)*q + (2.0/3.0)*(q2))
     limiter.apply(q)
+
 
 
     #update the step and proceed to the next time step.
