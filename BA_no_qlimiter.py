@@ -304,11 +304,7 @@ rho.project(rho_hat_bar + beta * (rho - rho_hat_bar))
 print("rho_max=", rho.dat.data.max())
 print("rho_min=", rho.dat.data.min())
 
-q_bar.project(q)
 limiter_q.apply(q)
-q_hat_bar.project(q)
-alpha.assign(alpha_expr)
-q.project(q_hat_bar + alpha * (q - q_hat_bar))
 print("q_max=", q.dat.data.max())
 print("q_min=", q.dat.data.min())
 
