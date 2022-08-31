@@ -318,6 +318,7 @@ output_freq = 20
 
 if step % output_freq == 0:
     rhos.append(rho.copy(deepcopy=True))
+    qs.append(q.copy(deepcopy=True))
     print("t=", t)
 
 
@@ -330,8 +331,8 @@ rho_hat_bar.project(rho)
 beta.assign(beta_expr)
 #apply the limiting scheme
 rho.project(rho_hat_bar + beta * (rho - rho_hat_bar))
-print(rho.dat.data.max())
-print(rho.dat.data.min())
+print("rho_max=", rho.dat.data.max())
+print("rho_min=", rho.dat.data.min())
 
 
 #Main body
@@ -450,8 +451,8 @@ while t < T - 0.5*dt:
     rho.project(rho_hat_bar + beta * (rho - rho_hat_bar))
 
 
-    print("rho_max=" rho.dat.data.max())
-    print("rho_min=" rho.dat.data.min())
+    print("rho_max=", rho.dat.data.max())
+    print("rho_min=", rho.dat.data.min())
 
 
 
@@ -497,11 +498,11 @@ while t < T - 0.5*dt:
 
 L2_err_rho = sqrt(assemble((rho - rho_init)*(rho - rho_init)*dx))
 L2_init_rho = sqrt(assemble(rho_init*rho_init*dx))
-print("error_rho =" L2_err_rho/L2_init_rho)
+print("error_rho =", L2_err_rho/L2_init_rho)
 
 L2_err_q = sqrt(assemble((q - q_init)*(q - q_init)*dx))
 L2_init_q = sqrt(assemble(q_init*q_init*dx))
-print("error_q ="L2_err_q/L2_init_q)
+print("error_q =", L2_err_q/L2_init_q)
 
 
 nsp = 16
