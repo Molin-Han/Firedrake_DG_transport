@@ -276,6 +276,44 @@ q2_hat_bar = Function(DG1)
 
 
 # q+- factor in alpha
+
+
+q1_plus = Function(DG1)
+w1 = TestFunction(DG1)
+q1_plus_num = Function(DG1)
+q1_plus_form = both(Fn1 * w1) * dS + Fn1 * w1 *ds
+assemble(q1_plus_form, tensor=q1_plus_num)
+q1_plus.assign((1/c_plus) * q1_plus_num)
+
+q1_minus = Function(DG1)
+q1_minus_num = Function(DG1)
+q1_minus_form = both(Fn1 * w1) * dS + Fn1 * w1 *ds
+assemble(q1_minus_form, tensor=q1_minus_num)
+q1_minus.assign((1/c_minus) * q1_minus_num)
+
+
+
+
+
+
+
+
+q2_plus = Function(DG1)
+w2 = TestFunction(DG1)
+q2_plus_num = Function(DG1)
+q2_plus_form = both(Fn2 * w2) * dS + Fn2 * w2 *ds
+assemble(q2_plus_form, tensor=q2_plus_num)
+q2_plus.assign((1/c_plus) * q2_plus_num)
+
+q2_minus = Function(DG1)
+q2_minus_num = Function(DG1)
+q2_minus_form = both(Fn2 * w2) * dS + Fn2 * w2 *ds
+assemble(q2_minus_form, tensor=q2_minus_num)
+q2_minus.assign((1/c_minus) * q2_minus_num)
+
+
+
+
 q_plus = Function(DG1)
 w = TestFunction(DG1)
 q_plus_num = Function(DG1)
@@ -289,15 +327,17 @@ q_minus_form = both(Fn * w) * dS + Fn * w *ds
 assemble(q_minus_form, tensor=q_minus_num)
 q_minus.assign((1/c_minus) * q_minus_num)
 
+
+#maximum bound for q
 qmax = Constant(2.0)
 
 
 #set alpha
-alpha_expr = Min(1, ((1 + c_minus - c_plus)* qmax - q_hat_bar * (1 - c_plus) - c_minus * q_minus) / (c_plus * (q_hat_bar - q_plus)))
+alpha_expr = Max(0, Min(1, ((1 + c_minus - c_plus)* qmax - q_hat_bar * (1 - c_plus) - c_minus * q_minus) / (c_plus * (q_hat_bar - q_plus))))
 
-alpha1_expr = Min(1, ((1 + c_minus - c_plus)* qmax - q1_hat_bar * (1 - c_plus) - c_minus * q_minus) / (c_plus * (q1_hat_bar - q_plus)))
+alpha1_expr = Max(0, Min(1, ((1 + c_minus - c_plus)* qmax - q1_hat_bar * (1 - c_plus) - c_minus * q1_minus) / (c_plus * (q1_hat_bar - q1_plus))))
 
-alpha2_expr = Min(1, ((1 + c_minus - c_plus)* qmax - q2_hat_bar * (1 - c_plus) - c_minus * q_minus) / (c_plus * (q2_hat_bar - q_plus)))
+alpha2_expr = Max(0, Min(1, ((1 + c_minus - c_plus)* qmax - q2_hat_bar * (1 - c_plus) - c_minus * q2_minus) / (c_plus * (q2_hat_bar - q2_plus))))
 
 
 #variational problem for q
@@ -401,18 +441,21 @@ while t < T - 0.5*dt:
 
     #For Flux_1
     Fssolver1.solve()
+    Fsf1,Fsi1 = split(Fs1)
+    Fnew1 = Fsf1 + Fsi1
+    Fn1  = 0.5*(dot((Fnew1), n) + abs(dot((Fnew1), n)))
 
     #For q_1
     solv1_q.solve()
     q1.assign(q + dq)
 
     #q+ recalculated
-    assemble(q_plus_form, tensor=q_plus_num)
-    q_plus.assign((1/c_plus) * q_plus_num)
+    assemble(q1_plus_form, tensor=q1_plus_num)
+    q1_plus.assign((1/c_plus) * q1_plus_num)
 
     #q- recalculated
-    assemble(q_minus_form, tensor=q_minus_num)
-    q_minus.assign((1/c_minus) * q_minus_num)
+    assemble(q1_minus_form, tensor=q1_minus_num)
+    q1_minus.assign((1/c_minus) * q1_minus_num)
 
     #q limiting scheme
     q1_bar.project(q1)
@@ -459,6 +502,9 @@ while t < T - 0.5*dt:
 
     #For Flux_2
     Fssolver2.solve()
+    Fsf2,Fsi2 = split(Fs2)
+    Fnew2 = Fsf2 + Fsi2
+    Fn2  = 0.5*(dot((Fnew2), n) + abs(dot((Fnew2), n)))
 
 
 
@@ -468,13 +514,22 @@ while t < T - 0.5*dt:
     solv2_q.solve()
     q1.assign(q1+dq)
 
-    #q+ recalculated
-    assemble(q_plus_form, tensor=q_plus_num)
-    q_plus.assign((1/c_plus) * q_plus_num)
+    #q1+ recalculated
+    assemble(q1_plus_form, tensor=q1_plus_num)
+    q1_plus.assign((1/c_plus) * q1_plus_num)
 
-    #q- recalculated
-    assemble(q_minus_form, tensor=q_minus_num)
-    q_minus.assign((1/c_minus) * q_minus_num)
+    #q1- recalculated
+    assemble(q1_minus_form, tensor=q1_minus_num)
+    q1_minus.assign((1/c_minus) * q1_minus_num)
+
+
+    #q2+ recalculated
+    assemble(q2_plus_form, tensor=q2_plus_num)
+    q2_plus.assign((1/c_plus) * q2_plus_num)
+
+    #q2- recalculated
+    assemble(q2_minus_form, tensor=q2_minus_num)
+    q2_minus.assign((1/c_minus) * q2_minus_num)
 
     #limiter apply to q1 another time.
     limiter_q.apply(q1)
@@ -534,6 +589,9 @@ while t < T - 0.5*dt:
 
     #For Flux
     Fssolver.solve()
+    Fsf,Fsi = split(Fs)
+    Fnew = Fsf + Fsi
+    Fn  = 0.5*(dot((Fnew), n) + abs(dot((Fnew), n)))
 
 
 
@@ -542,6 +600,15 @@ while t < T - 0.5*dt:
     solv3_q.solve()
     q2.assign(q2+dq)
     
+    #q2+ recalculated
+    assemble(q2_plus_form, tensor=q2_plus_num)
+    q2_plus.assign((1/c_plus) * q2_plus_num)
+
+    #q2- recalculated
+    assemble(q2_minus_form, tensor=q2_minus_num)
+    q2_minus.assign((1/c_minus) * q2_minus_num)
+
+
     #q+ recalculated
     assemble(q_plus_form, tensor=q_plus_num)
     q_plus.assign((1/c_plus) * q_plus_num)
