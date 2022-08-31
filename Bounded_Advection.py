@@ -270,8 +270,8 @@ q_hat_bar = Function(DG1)
 q1_bar = Function(DG1)
 q1_hat_bar = Function(DG1)
 
-q1_bar = Function(DG1)
-q1_hat_bar = Function(DG1)
+q2_bar = Function(DG1)
+q2_hat_bar = Function(DG1)
 
 
 # q+- factor in alpha
@@ -288,6 +288,13 @@ q_minus_form = both(Fn * w) * dS + Fn * w *ds
 assemble(q_minus_form, tensor=q_minus_num)
 q_minus.assign((1/c_minus) * q_minus_num)
 
+
+#set alpha
+alpha_expr = Min(1, ((1 + c_minus - c_plus)* Max(q) - q_hat_bar * (1 - c_plus) - c_minus * q_minus) / (c_plus * (q_hat_bar - q_plus)))
+
+alpha1_expr = Min(1, ((1 + c_minus - c_plus)* Max(q1) - q1_hat_bar * (1 - c_plus) - c_minus * q_minus) / (c_plus * (q1_hat_bar - q_plus)))
+
+alpha2_expr = Min(1, ((1 + c_minus - c_plus)* Max(q2) - q2_hat_bar * (1 - c_plus) - c_minus * q_minus) / (c_plus * (q2_hat_bar - q_plus)))
 
 
 #variational problem for q
@@ -325,7 +332,8 @@ solv3_q = LinearVariationalSolver(prob3_q, solver_parameters=params)
 
 
 #Set Kuzmin limiter
-limiter = VertexBasedLimiter(V)
+limiter_rho = VertexBasedLimiter(V)
+limiter_q = VertexBasedLimiter(V)
 
 t = 0.0
 step = 0
@@ -341,15 +349,22 @@ if step % output_freq == 0:
 
 #Apply the limiter to q and density first and find beta, alpha.
 rho_bar.project(rho)
-limiter.apply(rho)
+limiter_rho.apply(rho)
 rho_hat_bar.project(rho)
 #Here rho is the value after applying the Kuzmin limiter i.e. rho_hat
 beta.assign(beta_expr)
-#apply the limiting scheme
+#apply the limiting scheme to density
 rho.project(rho_hat_bar + beta * (rho - rho_hat_bar))
 print("rho_max=", rho.dat.data.max())
 print("rho_min=", rho.dat.data.min())
 
+q_bar.project(q)
+limiter_q.apply(q)
+q_hat_bar.project(q)
+alpha.assign(alpha_expr)
+q.project(q_hat_bar + alpha * (q - q_hat_bar))
+print("q_max=", q.dat.data.max())
+print("q_min=", q.dat.data.min())
 
 #Main body
 
@@ -375,7 +390,7 @@ while t < T - 0.5*dt:
 
     #rho limiting scheme, beta1 found.
     rho1_bar.project(rho1)
-    limiter.apply(rho1)
+    limiter_rho.apply(rho1)
     rho1_hat_bar.project(rho1)
     beta1.assign(beta1_expr)
     #apply the limiting scheme
@@ -387,7 +402,21 @@ while t < T - 0.5*dt:
     #For q_1
     solv1_q.solve()
     q1.assign(q + dq)
-    limiter.apply(q1)
+
+    #q+ recalculated
+    assemble(q_plus_form, tensor=q_plus_num)
+    q_plus.assign((1/c_plus) * q_plus_num)
+
+    #q- recalculated
+    assemble(q_minus_form, tensor=q_minus_num)
+    q_minus.assign((1/c_minus) * q_minus_num)
+
+    #q limiting scheme
+    q1_bar.project(q1)
+    limiter_q.apply(q1)
+    q1_hat_bar.project(q1)
+    alpha1.assign(alpha1_expr)
+    q1.project(q1_hat_bar + alpha1 * (q1 - q1_hat_bar))
 
 
 
@@ -410,7 +439,7 @@ while t < T - 0.5*dt:
     Courant_minus.assign(Courant_num_minus /Courant_denom_minus )
 
     #limiter apply to rho1 another time.
-    limiter.apply(rho1)
+    limiter_rho.apply(rho1)
     rho1_hat_bar.project(rho1)
     beta1.assign(beta1_expr)
     #apply the limiting scheme
@@ -419,7 +448,7 @@ while t < T - 0.5*dt:
     #Calculate for the second stage rho value.
     rho2.assign(0.75*rho + 0.25*(rho1))
     rho2_bar.project(rho2)
-    limiter.apply(rho2)
+    limiter_rho.apply(rho2)
     rho2_hat_bar.project(rho2)
     beta2.assign(beta2_expr)
     #apply the limiting scheme
@@ -431,11 +460,33 @@ while t < T - 0.5*dt:
 
 
     #For q_2
+
+
     solv2_q.solve()
     q1.assign(q1+dq)
-    limiter.apply(q1)
+
+    #q+ recalculated
+    assemble(q_plus_form, tensor=q_plus_num)
+    q_plus.assign((1/c_plus) * q_plus_num)
+
+    #q- recalculated
+    assemble(q_minus_form, tensor=q_minus_num)
+    q_minus.assign((1/c_minus) * q_minus_num)
+
+    #limiter apply to q1 another time.
+    limiter_q.apply(q1)
+    q1_hat_bar.project(q1)
+    alpha1.assign(alpha1_expr)
+    q1.project(q1_hat_bar + alpha1 * (q1 - q1_hat_bar))
+
+    #Calculate for the second stage q value.
     q2.assign(0.75*q + 0.25*(q1))
-    limiter.apply(q2)
+    q2_bar.project(q2)
+    #Apply limiting scheme
+    limiter_q.apply(q2)
+    q2_hat_bar.project(q2)
+    alpha2.assign(alpha2_expr)
+    q2.project(q2_hat_bar + alpha2 * (q2 - q2_hat_bar))
 
 
 
@@ -457,7 +508,7 @@ while t < T - 0.5*dt:
     Courant_minus.assign(Courant_num_minus /Courant_denom_minus )
 
     #limiter apply to rho2 another time.
-    limiter.apply(rho2)
+    limiter_rho.apply(rho2)
     rho2_hat_bar.project(rho2)
     beta2.assign(beta2_expr)
     #apply the limiting scheme
@@ -466,7 +517,7 @@ while t < T - 0.5*dt:
     #Calculate for the rho value.
     rho.assign((1.0/3.0)*rho + (2.0/3.0)*(rho2))
     rho_bar.project(rho)
-    limiter.apply(rho)
+    limiter_rho.apply(rho)
     rho_hat_bar.project(rho)
     beta.assign(beta_expr)
     #apply the limiting scheme
@@ -487,9 +538,34 @@ while t < T - 0.5*dt:
     #For q
     solv3_q.solve()
     q2.assign(q2+dq)
-    limiter.apply(q2)
+    
+    #q+ recalculated
+    assemble(q_plus_form, tensor=q_plus_num)
+    q_plus.assign((1/c_plus) * q_plus_num)
+
+    #q- recalculated
+    assemble(q_minus_form, tensor=q_minus_num)
+    q_minus.assign((1/c_minus) * q_minus_num)
+
+
+    #limiter apply to q2 another time.
+    limiter_q.apply(q2)
+    q2_hat_bar.project(q2)
+    alpha2.assign(alpha2_expr)
+    q2.project(q2_hat_bar + alpha2 * (q2 - q2_hat_bar))
+
+
+    #Calculate for the third stage q value.
     q.assign((1.0/3.0)*q + (2.0/3.0)*(q2))
-    limiter.apply(q)
+    q_bar.project(q)
+    #Apply limiting scheme
+    limiter_q.apply(q)
+    q_hat_bar.project(q)
+    alpha.assign(alpha_expr)
+    q.project(q_hat_bar + alpha * (q - q_hat_bar))
+
+    print("q_max=", q.dat.data.max())
+    print("q_min=", q.dat.data.min())
 
 
 
