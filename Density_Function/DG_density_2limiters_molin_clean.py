@@ -117,14 +117,11 @@ c1_minus = Courant_minus * rho1 / rho1_hat_bar
 c2_plus = Courant_plus * rho2 / rho2_hat_bar
 c2_minus = Courant_minus * rho2 / rho2_hat_bar
 
-beta_expr_colin = Max(0, Min(1, (1 + c_minus - Courant_plus) / (c_plus - Courant_plus)))
 beta_expr_molin = Max(0, Min(1, (1 + Courant_minus - Courant_plus)/(c_minus - c_plus - Courant_minus + Courant_plus)))
 
 beta1_expr_molin = Max(0, Min(1, (1 + Courant_minus - Courant_plus)/(c1_minus - c1_plus - Courant_minus + Courant_plus)))
-beta1_expr_colin = Max(0, Min(1, (1 + c1_minus - Courant_plus) / (c1_plus - Courant_plus)))
 
 beta2_expr_molin = Max(0, Min(1, (1 + Courant_minus - Courant_plus)/(c2_minus - c2_plus - Courant_minus + Courant_plus)))
-beta2_expr_colin = Max(0, Min(1, (1 + c2_minus - Courant_plus) / (c2_plus - Courant_plus)))
 
 #variational problems for density
 L1_rho = dtc*(rho*dot(grad(phi),u)*dx

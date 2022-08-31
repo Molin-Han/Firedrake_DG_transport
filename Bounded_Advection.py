@@ -139,20 +139,6 @@ beta2_expr = Max(0, Min(1, (1 + Courant_minus - Courant_plus)/(c2_minus - c2_plu
 
 
 
-#set the flux limiter for tracer q.
-alpha = Function(DG1)
-alpha1 = Function(DG1)
-alpha2 = Function(DG1)
-
-q_bar = Function(DG1)
-q_hat_bar = Function(DG1)
-
-q1_bar = Function(DG1)
-q1_hat_bar = Function(DG1)
-
-q1_bar = Function(DG1)
-q1_hat_bar = Function(DG1)
-
 
 
 
@@ -171,6 +157,70 @@ drho = Function(V)
 
 #Flux Problem
 # Surface Flux equation - build RT2 out of BDM1 and TDG1
+Fluxes1 = FunctionSpace(mesh,"BDM",1)
+Inners1 = VectorFunctionSpace(mesh,"DG",0)
+W1 = MixedFunctionSpace((Fluxes1,Inners1))
+
+wI1 = TestFunction(Inners1)
+assemble(inner(wI1,u)*dx)
+
+wF1,wI1 = TestFunctions(W1)
+uF1,uI1 = TrialFunctions(W1)
+
+aFs1 = (
+    (inner(wF1('+'),n('+'))*inner(uF1('+'),n('+')) + 
+     inner(wF1('-'),n('-'))*inner(uF1('-'),n('-')))*dS
+    + inner(wI1,uI1)*dx
+    )
+LFs1 = (
+    2.0*(inner(wF1('+'),n('+'))*un('+')*rho1('+') 
+         + inner(wF1('-'),n('-'))*un('-')*rho1('-'))*dS
+    + inner(wI1,u)*rho1*dx
+    )
+
+Fs1 = Function(W1)
+
+Fsproblem1 = LinearVariationalProblem(aFs1, LFs1, Fs1)
+Fssolver1 = LinearVariationalSolver(Fsproblem1)
+Fssolver1.solve()
+Fsf1,Fsi1 = split(Fs1)
+Fnew1 = Fsf1 + Fsi1
+Fn1  = 0.5*(dot((Fnew1), n) + abs(dot((Fnew1), n)))
+
+
+
+Fluxes2 = FunctionSpace(mesh,"BDM",1)
+Inners2 = VectorFunctionSpace(mesh,"DG",0)
+W2 = MixedFunctionSpace((Fluxes2,Inners2))
+
+wI2 = TestFunction(Inners2)
+assemble(inner(wI2,u)*dx)
+
+wF2,wI2 = TestFunctions(W2)
+uF2,uI2 = TrialFunctions(W2)
+
+aFs2 = (
+    (inner(wF2('+'),n('+'))*inner(uF2('+'),n('+')) + 
+     inner(wF2('-'),n('-'))*inner(uF2('-'),n('-')))*dS
+    + inner(wI2,uI2)*dx
+    )
+LFs2 = (
+    2.0*(inner(wF2('+'),n('+'))*un('+')*rho2('+') 
+         + inner(wF2('-'),n('-'))*un('-')*rho2('-'))*dS
+    + inner(wI2,u)*rho2*dx
+    )
+
+Fs2 = Function(W2)
+
+Fsproblem2 = LinearVariationalProblem(aFs2, LFs2, Fs2)
+Fssolver2 = LinearVariationalSolver(Fsproblem2)
+Fssolver2.solve()
+Fsf2,Fsi2 = split(Fs2)
+Fnew2 = Fsf2 + Fsi2
+Fn2  = 0.5*(dot((Fnew2), n) + abs(dot((Fnew2), n)))
+
+
+
 Fluxes = FunctionSpace(mesh,"BDM",1)
 Inners = VectorFunctionSpace(mesh,"DG",0)
 W = MixedFunctionSpace((Fluxes,Inners))
@@ -208,8 +258,33 @@ L1_q = dtc*(q*dot(grad(phi),Fnew)*dx
           - (phi('+') - phi('-'))*(Fn('+')*q('+') - Fn('-')*q('-'))*dS)
 
 q1 = Function(V); q2 = Function(V)
-L2_q = replace(L1_q, {q: q1}); L3_q = replace(L1_q, {q: q2})
+L2_q = replace(L1_q, {q: q1, Fnew: Fnew1, Fn: Fn1})
+L3_q = replace(L1_q, {q: q2, Fnew: Fnew2, Fn: Fn2})
 dq = Function(V)
+
+
+
+
+
+
+#set the flux limiter for tracer q.
+alpha = Function(DG1)
+alpha1 = Function(DG1)
+alpha2 = Function(DG1)
+
+q_bar = Function(DG1)
+q_hat_bar = Function(DG1)
+
+q1_bar = Function(DG1)
+q1_hat_bar = Function(DG1)
+
+q1_bar = Function(DG1)
+q1_hat_bar = Function(DG1)
+
+
+
+
+
 
 
 
@@ -290,9 +365,7 @@ while t < T - 0.5*dt:
     rho1.project(rho1_hat_bar + beta1 * (rho1 - rho1_hat_bar))
 
     #For Flux_1
-
-
-
+    Fssolver1.solve()
 
     #For q_1
 
@@ -334,7 +407,7 @@ while t < T - 0.5*dt:
     rho2.project(rho2_hat_bar + beta2 * (rho2 - rho2_hat_bar))
 
     #For Flux_2
-
+    Fssolver2.solve()
 
 
 
@@ -380,8 +453,16 @@ while t < T - 0.5*dt:
     print("rho_max=" rho.dat.data.max())
     print("rho_min=" rho.dat.data.min())
 
-    #solve the flux problem(each stage)
+
+
+    #For Flux
     Fssolver.solve()
+
+
+
+
+    #For q
+
 
 
     #solve the advection equation for q
@@ -403,7 +484,7 @@ while t < T - 0.5*dt:
     limiter.apply(q)
 
 
-
+    #update the step and proceed to the next time step.
     step += 1
     t += dt
 
