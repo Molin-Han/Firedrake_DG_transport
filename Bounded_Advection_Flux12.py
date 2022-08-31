@@ -292,12 +292,6 @@ assemble(q1_minus_form, tensor=q1_minus_num)
 q1_minus.assign((1/c_minus) * q1_minus_num)
 
 
-
-
-
-
-
-
 q2_plus = Function(DG1)
 w2 = TestFunction(DG1)
 q2_plus_num = Function(DG1)
