@@ -13,7 +13,7 @@ W = VectorFunctionSpace(mesh, "CG", 1)
 x, y = SpatialCoordinate(mesh)
 #Initial setting for the problem
 #velocity field
-velocity = as_vector(( (0.05*x - y+0.475 ) , ( x + 0.05*y-0.525)))
+velocity = as_vector(( (-0.05*x - y + 0.475 ) , ( x - 0.05*y-0.525)))
 u = Function(W).interpolate(velocity)
 
 #initial condition for the atomsphere
