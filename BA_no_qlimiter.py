@@ -158,6 +158,68 @@ drho = Function(V)
 
 #Flux Problem
 # Surface Flux equation - build RT2 out of BDM1 and TDG1
+Fluxes1 = FunctionSpace(mesh,"BDM",1)
+Inners1 = VectorFunctionSpace(mesh,"DG",0)
+W1 = MixedFunctionSpace((Fluxes1,Inners1))
+
+wI1 = TestFunction(Inners1)
+assemble(inner(wI1,u)*dx)
+
+wF1,wI1 = TestFunctions(W1)
+uF1,uI1 = TrialFunctions(W1)
+
+aFs1 = (
+    (inner(wF1('+'),n('+'))*inner(uF1('+'),n('+')) + 
+     inner(wF1('-'),n('-'))*inner(uF1('-'),n('-')))*dS
+    + inner(wI1,uI1)*dx
+    )
+LFs1 = (
+    2.0*(inner(wF1('+'),n('+'))*un('+')*rho1('+') 
+         + inner(wF1('-'),n('-'))*un('-')*rho1('-'))*dS
+    + inner(wI1,u)*rho1*dx
+    )
+
+Fs1 = Function(W1)
+
+Fsproblem1 = LinearVariationalProblem(aFs1, LFs1, Fs1)
+Fssolver1 = LinearVariationalSolver(Fsproblem1)
+Fssolver1.solve()
+Fsf1,Fsi1 = split(Fs1)
+Fnew1 = Fsf1 + Fsi1
+Fn1  = 0.5*(dot((Fnew1), n) + abs(dot((Fnew1), n)))
+
+
+
+Fluxes2 = FunctionSpace(mesh,"BDM",1)
+Inners2 = VectorFunctionSpace(mesh,"DG",0)
+W2 = MixedFunctionSpace((Fluxes2,Inners2))
+
+wI2 = TestFunction(Inners2)
+assemble(inner(wI2,u)*dx)
+
+wF2,wI2 = TestFunctions(W2)
+uF2,uI2 = TrialFunctions(W2)
+
+aFs2 = (
+    (inner(wF2('+'),n('+'))*inner(uF2('+'),n('+')) + 
+     inner(wF2('-'),n('-'))*inner(uF2('-'),n('-')))*dS
+    + inner(wI2,uI2)*dx
+    )
+LFs2 = (
+    2.0*(inner(wF2('+'),n('+'))*un('+')*rho2('+') 
+         + inner(wF2('-'),n('-'))*un('-')*rho2('-'))*dS
+    + inner(wI2,u)*rho2*dx
+    )
+
+Fs2 = Function(W2)
+
+Fsproblem2 = LinearVariationalProblem(aFs2, LFs2, Fs2)
+Fssolver2 = LinearVariationalSolver(Fsproblem2)
+Fssolver2.solve()
+Fsf2,Fsi2 = split(Fs2)
+Fnew2 = Fsf2 + Fsi2
+Fn2  = 0.5*(dot((Fnew2), n) + abs(dot((Fnew2), n)))
+
 
 
 Fluxes = FunctionSpace(mesh,"BDM",1)
@@ -250,8 +312,8 @@ L1_q = dtc*(q*dot(grad(phi),Fnew)*dx
           - (phi('+') - phi('-'))*(Fn('+')*q('+') - Fn('-')*q('-'))*dS)
 
 
-L2_q = replace(L1_q, {q: q1})
-L3_q = replace(L1_q, {q: q2})
+L2_q = replace(L1_q, {q: q1, Fnew:Fnew1, Fn: Fn1})
+L3_q = replace(L1_q, {q: q2, Fnew:Fnew2, Fn: Fn2})
 dq = Function(V)
 
 
@@ -388,10 +450,10 @@ while t < T - 0.5*dt:
     rho2.project(rho2_hat_bar + beta2 * (rho2 - rho2_hat_bar))
 
     #For Flux_2
-    Fssolver.solve()
-    Fsf,Fsi = split(Fs)
-    Fnew = Fsf + Fsi
-    Fn  = 0.5*(dot((Fnew), n) + abs(dot((Fnew), n)))
+    Fssolver1.solve()
+    Fsf1,Fsi1 = split(Fs1)
+    Fnew1 = Fsf1 + Fsi1
+    Fn1  = 0.5*(dot((Fnew1), n) + abs(dot((Fnew1), n)))
 
 
 
@@ -453,10 +515,10 @@ while t < T - 0.5*dt:
 
 
     #For Flux
-    Fssolver.solve()
-    Fsf,Fsi = split(Fs)
-    Fnew = Fsf + Fsi
-    Fn  = 0.5*(dot((Fnew), n) + abs(dot((Fnew), n)))
+    Fssolver2.solve()
+    Fsf2,Fsi2 = split(Fs)
+    Fnew2 = Fsf2 + Fsi2
+    Fn2  = 0.5*(dot((Fnew2), n) + abs(dot((Fnew2), n)))
 
 
 
