@@ -158,68 +158,6 @@ drho = Function(V)
 
 #Flux Problem
 # Surface Flux equation - build RT2 out of BDM1 and TDG1
-Fluxes1 = FunctionSpace(mesh,"BDM",1)
-Inners1 = VectorFunctionSpace(mesh,"DG",0)
-W1 = MixedFunctionSpace((Fluxes1,Inners1))
-
-wI1 = TestFunction(Inners1)
-assemble(inner(wI1,u)*dx)
-
-wF1,wI1 = TestFunctions(W1)
-uF1,uI1 = TrialFunctions(W1)
-
-aFs1 = (
-    (inner(wF1('+'),n('+'))*inner(uF1('+'),n('+')) + 
-     inner(wF1('-'),n('-'))*inner(uF1('-'),n('-')))*dS
-    + inner(wI1,uI1)*dx
-    )
-LFs1 = (
-    2.0*(inner(wF1('+'),n('+'))*un('+')*rho1('+') 
-         + inner(wF1('-'),n('-'))*un('-')*rho1('-'))*dS
-    + inner(wI1,u)*rho1*dx
-    )
-
-Fs1 = Function(W1)
-
-Fsproblem1 = LinearVariationalProblem(aFs1, LFs1, Fs1)
-Fssolver1 = LinearVariationalSolver(Fsproblem1)
-Fssolver1.solve()
-Fsf1,Fsi1 = split(Fs1)
-Fnew1 = Fsf1 + Fsi1
-Fn1  = 0.5*(dot((Fnew1), n) + abs(dot((Fnew1), n)))
-
-
-
-Fluxes2 = FunctionSpace(mesh,"BDM",1)
-Inners2 = VectorFunctionSpace(mesh,"DG",0)
-W2 = MixedFunctionSpace((Fluxes2,Inners2))
-
-wI2 = TestFunction(Inners2)
-assemble(inner(wI2,u)*dx)
-
-wF2,wI2 = TestFunctions(W2)
-uF2,uI2 = TrialFunctions(W2)
-
-aFs2 = (
-    (inner(wF2('+'),n('+'))*inner(uF2('+'),n('+')) + 
-     inner(wF2('-'),n('-'))*inner(uF2('-'),n('-')))*dS
-    + inner(wI2,uI2)*dx
-    )
-LFs2 = (
-    2.0*(inner(wF2('+'),n('+'))*un('+')*rho2('+') 
-         + inner(wF2('-'),n('-'))*un('-')*rho2('-'))*dS
-    + inner(wI2,u)*rho2*dx
-    )
-
-Fs2 = Function(W2)
-
-Fsproblem2 = LinearVariationalProblem(aFs2, LFs2, Fs2)
-Fssolver2 = LinearVariationalSolver(Fsproblem2)
-Fssolver2.solve()
-Fsf2,Fsi2 = split(Fs2)
-Fnew2 = Fsf2 + Fsi2
-Fn2  = 0.5*(dot((Fnew2), n) + abs(dot((Fnew2), n)))
-
 
 
 Fluxes = FunctionSpace(mesh,"BDM",1)
@@ -278,35 +216,6 @@ q2_hat_bar = Function(DG1)
 # q+- factor in alpha
 
 
-q1_plus = Function(DG1)
-w1 = TestFunction(DG1)
-q1_plus_num = Function(DG1)
-q1_plus_form = both(Fn1 * w1) * dS + Fn1 * w1 *ds
-assemble(q1_plus_form, tensor=q1_plus_num)
-q1_plus.assign((1/c_plus) * q1_plus_num)
-
-q1_minus = Function(DG1)
-q1_minus_num = Function(DG1)
-q1_minus_form = both(Fn1 * w1) * dS + Fn1 * w1 *ds
-assemble(q1_minus_form, tensor=q1_minus_num)
-q1_minus.assign((1/c_minus) * q1_minus_num)
-
-
-q2_plus = Function(DG1)
-w2 = TestFunction(DG1)
-q2_plus_num = Function(DG1)
-q2_plus_form = both(Fn2 * w2) * dS + Fn2 * w2 *ds
-assemble(q2_plus_form, tensor=q2_plus_num)
-q2_plus.assign((1/c_plus) * q2_plus_num)
-
-q2_minus = Function(DG1)
-q2_minus_num = Function(DG1)
-q2_minus_form = both(Fn2 * w2) * dS + Fn2 * w2 *ds
-assemble(q2_minus_form, tensor=q2_minus_num)
-q2_minus.assign((1/c_minus) * q2_minus_num)
-
-
-
 
 q_plus = Function(DG1)
 w = TestFunction(DG1)
@@ -323,15 +232,15 @@ q_minus.assign((1/c_minus) * q_minus_num)
 
 
 #maximum bound for q
-qmax = Constant(1.0)
+qmax = Constant(2.0)
 
 
 #set alpha
 alpha_expr = Max(0, Min(1, ((1 + c_minus - c_plus)* qmax - q_hat_bar * (1 - c_plus) - c_minus * q_minus) / (c_plus * (q_hat_bar - q_plus))))
 
-alpha1_expr = Max(0, Min(1, ((1 + c_minus - c_plus)* qmax - q1_hat_bar * (1 - c_plus) - c_minus * q1_minus) / (c_plus * (q1_hat_bar - q1_plus))))
+alpha1_expr = Max(0, Min(1, ((1 + c_minus - c_plus)* qmax - q1_hat_bar * (1 - c_plus) - c_minus * q_minus) / (c_plus * (q1_hat_bar - q_plus))))
 
-alpha2_expr = Max(0, Min(1, ((1 + c_minus - c_plus)* qmax - q2_hat_bar * (1 - c_plus) - c_minus * q2_minus) / (c_plus * (q2_hat_bar - q2_plus))))
+alpha2_expr = Max(0, Min(1, ((1 + c_minus - c_plus)* qmax - q2_hat_bar * (1 - c_plus) - c_minus * q_minus) / (c_plus * (q2_hat_bar - q_plus))))
 
 
 #variational problem for q
@@ -341,8 +250,8 @@ L1_q = dtc*(q*dot(grad(phi),Fnew)*dx
           - (phi('+') - phi('-'))*(Fn('+')*q('+') - Fn('-')*q('-'))*dS)
 
 
-L2_q = replace(L1_q, {q: q1, Fnew: Fnew1, Fn: Fn1})
-L3_q = replace(L1_q, {q: q2, Fnew: Fnew2, Fn: Fn2})
+L2_q = replace(L1_q, {q: q1})
+L3_q = replace(L1_q, {q: q2})
 dq = Function(V)
 
 
@@ -434,29 +343,17 @@ while t < T - 0.5*dt:
     rho1.project(rho1_hat_bar + beta1 * (rho1 - rho1_hat_bar))
 
     #For Flux_1
-    Fssolver1.solve()
-    Fsf1,Fsi1 = split(Fs1)
-    Fnew1 = Fsf1 + Fsi1
-    Fn1  = 0.5*(dot((Fnew1), n) + abs(dot((Fnew1), n)))
+    Fssolver.solve()
+    Fsf,Fsi = split(Fs)
+    Fnew = Fsf + Fsi
+    Fn  = 0.5*(dot((Fnew), n) + abs(dot((Fnew), n)))
 
     #For q_1
     solv1_q.solve()
     q1.assign(q + dq)
 
-    #q+ recalculated
-    assemble(q1_plus_form, tensor=q1_plus_num)
-    q1_plus.assign((1/c_plus) * q1_plus_num)
 
-    #q- recalculated
-    assemble(q1_minus_form, tensor=q1_minus_num)
-    q1_minus.assign((1/c_minus) * q1_minus_num)
-
-    #q limiting scheme
-    q1_bar.project(q1)
     limiter_q.apply(q1)
-    q1_hat_bar.project(q1)
-    alpha1.assign(alpha1_expr)
-    q1.project(q1_hat_bar + alpha1 * (q1 - q1_hat_bar))
 
 
 
@@ -495,10 +392,10 @@ while t < T - 0.5*dt:
     rho2.project(rho2_hat_bar + beta2 * (rho2 - rho2_hat_bar))
 
     #For Flux_2
-    Fssolver2.solve()
-    Fsf2,Fsi2 = split(Fs2)
-    Fnew2 = Fsf2 + Fsi2
-    Fn2  = 0.5*(dot((Fnew2), n) + abs(dot((Fnew2), n)))
+    Fssolver.solve()
+    Fsf,Fsi = split(Fs)
+    Fnew = Fsf + Fsi
+    Fn  = 0.5*(dot((Fnew), n) + abs(dot((Fnew), n)))
 
 
 
@@ -508,37 +405,15 @@ while t < T - 0.5*dt:
     solv2_q.solve()
     q1.assign(q1+dq)
 
-    #q1+ recalculated
-    assemble(q1_plus_form, tensor=q1_plus_num)
-    q1_plus.assign((1/c_plus) * q1_plus_num)
 
-    #q1- recalculated
-    assemble(q1_minus_form, tensor=q1_minus_num)
-    q1_minus.assign((1/c_minus) * q1_minus_num)
-
-
-    #q2+ recalculated
-    assemble(q2_plus_form, tensor=q2_plus_num)
-    q2_plus.assign((1/c_plus) * q2_plus_num)
-
-    #q2- recalculated
-    assemble(q2_minus_form, tensor=q2_minus_num)
-    q2_minus.assign((1/c_minus) * q2_minus_num)
-
-    #limiter apply to q1 another time.
     limiter_q.apply(q1)
-    q1_hat_bar.project(q1)
-    alpha1.assign(alpha1_expr)
-    q1.project(q1_hat_bar + alpha1 * (q1 - q1_hat_bar))
+
 
     #Calculate for the second stage q value.
     q2.assign(0.75*q + 0.25*(q1))
-    q2_bar.project(q2)
+
     #Apply limiting scheme
     limiter_q.apply(q2)
-    q2_hat_bar.project(q2)
-    alpha2.assign(alpha2_expr)
-    q2.project(q2_hat_bar + alpha2 * (q2 - q2_hat_bar))
 
 
 
@@ -593,40 +468,19 @@ while t < T - 0.5*dt:
     #For q
     solv3_q.solve()
     q2.assign(q2+dq)
-    
-    #q2+ recalculated
-    assemble(q2_plus_form, tensor=q2_plus_num)
-    q2_plus.assign((1/c_plus) * q2_plus_num)
-
-    #q2- recalculated
-    assemble(q2_minus_form, tensor=q2_minus_num)
-    q2_minus.assign((1/c_minus) * q2_minus_num)
 
 
-    #q+ recalculated
-    assemble(q_plus_form, tensor=q_plus_num)
-    q_plus.assign((1/c_plus) * q_plus_num)
 
-    #q- recalculated
-    assemble(q_minus_form, tensor=q_minus_num)
-    q_minus.assign((1/c_minus) * q_minus_num)
 
 
     #limiter apply to q2 another time.
     limiter_q.apply(q2)
-    q2_hat_bar.project(q2)
-    alpha2.assign(alpha2_expr)
-    q2.project(q2_hat_bar + alpha2 * (q2 - q2_hat_bar))
 
 
     #Calculate for the third stage q value.
     q.assign((1.0/3.0)*q + (2.0/3.0)*(q2))
-    q_bar.project(q)
     #Apply limiting scheme
     limiter_q.apply(q)
-    q_hat_bar.project(q)
-    alpha.assign(alpha_expr)
-    q.project(q_hat_bar + alpha * (q - q_hat_bar))
 
     print("q_max=", q.dat.data.max())
     print("q_min=", q.dat.data.min())
@@ -668,7 +522,7 @@ interval = 1e3 * output_freq * dt
 animation_rho = FuncAnimation(fig, animate, frames=rhos, interval=interval)
 animation_q = FuncAnimation(fig, animate, frames=qs, interval=interval)
 try:
-    animation_rho.save("BA_rho_1.mp4", writer="ffmpeg")
-    animation_q.save("BA_q_1.mp4", writer="ffmpeg")
+    animation_rho.save("BA_noq_rho_1.mp4", writer="ffmpeg")
+    animation_q.save("BA_noq_q_1.mp4", writer="ffmpeg")
 except:
     print("Failed to write movie! Try installing `ffmpeg`.")
