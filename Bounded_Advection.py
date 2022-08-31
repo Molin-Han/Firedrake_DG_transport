@@ -251,23 +251,15 @@ Fsf,Fsi = split(Fs)
 Fnew = Fsf + Fsi
 Fn  = 0.5*(dot((Fnew), n) + abs(dot((Fnew), n)))
 
-#variational problem for q
-L1_q = dtc*(q*dot(grad(phi),Fnew)*dx
-          - conditional(dot(Fnew, n) < 0, phi*dot(Fnew, n)*q_in, 0.0)*ds
-          - conditional(dot(Fnew, n) > 0, phi*dot(Fnew, n)*q, 0.0)*ds
-          - (phi('+') - phi('-'))*(Fn('+')*q('+') - Fn('-')*q('-'))*dS)
-
-q1 = Function(V); q2 = Function(V)
-L2_q = replace(L1_q, {q: q1, Fnew: Fnew1, Fn: Fn1})
-L3_q = replace(L1_q, {q: q2, Fnew: Fnew2, Fn: Fn2})
-dq = Function(V)
-
-
 
 
 
 
 #set the flux limiter for tracer q.
+
+q1 = Function(V); q2 = Function(V)
+
+
 alpha = Function(DG1)
 alpha1 = Function(DG1)
 alpha2 = Function(DG1)
@@ -282,8 +274,32 @@ q1_bar = Function(DG1)
 q1_hat_bar = Function(DG1)
 
 
+# q+- factor in alpha
+q_plus = Function(DG1)
+w = TestFunction(DG1)
+q_plus_num = Function(DG1)
+q_plus_form = both(Fn * w) * dS + Fn * w *ds
+assemble(q_plus_form, tensor=q_plus_num)
+q_plus.assign((1/c_plus) * q_plus_num)
+
+q_minus = Function(DG1)
+q_minus_num = Function(DG1)
+q_minus_form = both(Fn * w) * dS + Fn * w *ds
+assemble(q_minus_form, tensor=q_minus_num)
+q_minus.assign((1/c_minus) * q_minus_num)
 
 
+
+#variational problem for q
+L1_q = dtc*(q*dot(grad(phi),Fnew)*dx
+          - conditional(dot(Fnew, n) < 0, phi*dot(Fnew, n)*q_in, 0.0)*ds
+          - conditional(dot(Fnew, n) > 0, phi*dot(Fnew, n)*q, 0.0)*ds
+          - (phi('+') - phi('-'))*(Fn('+')*q('+') - Fn('-')*q('-'))*dS)
+
+
+L2_q = replace(L1_q, {q: q1, Fnew: Fnew1, Fn: Fn1})
+L3_q = replace(L1_q, {q: q2, Fnew: Fnew2, Fn: Fn2})
+dq = Function(V)
 
 
 
