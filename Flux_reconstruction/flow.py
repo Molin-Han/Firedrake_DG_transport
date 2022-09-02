@@ -111,3 +111,7 @@ Fs = Function(W)
 Fsproblem = LinearVariationalProblem(aFs, LFs, Fs)
 Fssolver = LinearVariationalSolver(Fsproblem)
 Fssolver.solve()
+Fsf,Fsi = split(Fs)
+Fnew = Fsf + Fsi
+Fn  = 0.5*(dot((Fnew), n) + abs(dot((Fnew), n)))
+print(Fn)
