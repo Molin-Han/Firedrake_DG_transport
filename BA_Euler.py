@@ -250,9 +250,9 @@ Fsproblem = LinearVariationalProblem(aFs, LFs, Fs)
 Fssolver = LinearVariationalSolver(Fsproblem)
 Fssolver.solve()
 Fsf,Fsi = split(Fs)
-Fnew = Fsf + Fsi
-Fn  = 0.5*(dot((Fnew), n) + abs(dot((Fnew), n)))
-
+Fnew = Fsf+Fsi
+Fn = Function(DG1)
+Fn=0.5*(dot((Fnew), n) + abs(dot((Fnew), n)))
 
 
 
@@ -385,6 +385,14 @@ while t < T - 0.5*dt:
     Fnew = Fsf + Fsi
     Fn  = 0.5*(dot((Fnew), n) + abs(dot((Fnew), n)))
 
+    L1_q = dtc*(q*dot(grad(phi),Fnew)*dx
+          - conditional(dot(Fnew, n) < 0, phi*dot(Fnew, n)*q_in, 0.0)*ds
+          - conditional(dot(Fnew, n) > 0, phi*dot(Fnew, n)*q, 0.0)*ds
+          - (phi('+') - phi('-'))*(Fn('+')*q('+') - Fn('-')*q('-'))*dS)
+
+    params = {'ksp_type': 'preonly', 'pc_type': 'bjacobi', 'sub_pc_type': 'ilu'}
+    prob1_q = LinearVariationalProblem(a, L1_q, dq)
+    solv1_q = LinearVariationalSolver(prob1_q, solver_parameters=params)
     #For q_1
     solv1_q.solve()
     q.assign(q + dq)
