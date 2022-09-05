@@ -288,7 +288,7 @@ q_plus.assign((1/c_plus) * q_plus_num)
 
 q_minus = Function(DG1)
 q_minus_num = Function(DG1)
-q_minus_form = both(Fn * w) * dS + Fn * w *ds
+q_minus_form = -both(Fn * w) * dS -Fn * w *ds
 assemble(q_minus_form, tensor=q_minus_num)
 q_minus.assign((1/c_minus) * q_minus_num)
 

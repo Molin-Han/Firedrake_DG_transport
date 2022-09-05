@@ -281,13 +281,13 @@ q2_hat_bar = Function(DG1)
 q1_plus = Function(DG1)
 w1 = TestFunction(DG1)
 q1_plus_num = Function(DG1)
-q1_plus_form = both(Fn1 * w1) * q1('+') * dS + Fn1 * w1 * q1('+') * ds
+q1_plus_form = both(Fn1 * w1)  * dS + Fn1 * w1  * ds
 assemble(q1_plus_form, tensor=q1_plus_num)
 q1_plus.assign((1/c_plus) * q1_plus_num)
 
 q1_minus = Function(DG1)
 q1_minus_num = Function(DG1)
-q1_minus_form = both(Fn1 * w1) * q1('-') * dS + Fn1 * w1 * q1('-') * ds
+q1_minus_form = -both(Fn1 * w1)  * dS - Fn1 * w1  * ds
 assemble(q1_minus_form, tensor=q1_minus_num)
 q1_minus.assign((1/c_minus) * q1_minus_num)
 
@@ -295,13 +295,13 @@ q1_minus.assign((1/c_minus) * q1_minus_num)
 q2_plus = Function(DG1)
 w2 = TestFunction(DG1)
 q2_plus_num = Function(DG1)
-q2_plus_form = both(Fn2 * w2) * q2('+') * dS + Fn2 * w2 * q2('+') * ds
+q2_plus_form = both(Fn2 * w2)  * dS + Fn2 * w2 * ds
 assemble(q2_plus_form, tensor=q2_plus_num)
 q2_plus.assign((1/c_plus) * q2_plus_num)
 
 q2_minus = Function(DG1)
 q2_minus_num = Function(DG1)
-q2_minus_form = both(Fn2 * w2) * q2('-') * dS + Fn2 * w2 * q2('-') * ds
+q2_minus_form = -both(Fn2 * w2) * dS - Fn2 * w2  * ds
 assemble(q2_minus_form, tensor=q2_minus_num)
 q2_minus.assign((1/c_minus) * q2_minus_num)
 
@@ -311,13 +311,13 @@ q2_minus.assign((1/c_minus) * q2_minus_num)
 q_plus = Function(DG1)
 w = TestFunction(DG1)
 q_plus_num = Function(DG1)
-q_plus_form = both(Fn * w) * q('+') * dS + Fn * w * q('+') *ds
+q_plus_form = both(Fn * w)  * dS + Fn * w *ds
 assemble(q_plus_form, tensor=q_plus_num)
 q_plus.assign((1/c_plus) * q_plus_num)
 
 q_minus = Function(DG1)
 q_minus_num = Function(DG1)
-q_minus_form = both(Fn * w) * q('-') * dS + Fn * w * q('-') *ds
+q_minus_form =- both(Fn * w)  * dS - Fn * w  *ds
 assemble(q_minus_form, tensor=q_minus_num)
 q_minus.assign((1/c_minus) * q_minus_num)
 
