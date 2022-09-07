@@ -134,6 +134,9 @@ prob1_q = LinearVariationalProblem(a, L1_q, dq)
 solv1_q = LinearVariationalSolver(prob1_q, solver_parameters=params)
 
 
+#Set Kuzmin limiter
+limiter_rho = VertexBasedLimiter(V)
+limiter_q = VertexBasedLimiter(V)
 
 t = 0.0
 step = 0
@@ -143,18 +146,29 @@ if step % output_freq == 0:
     rhos.append(rho.copy(deepcopy=True))
     qs.append(q.copy(deepcopy=True))
     print("t=", t)
+print("rho_max=", rho.dat.data.max())
+print("rho_min=", rho.dat.data.min())
+
+print("q_max=", q.dat.data.max())
+print("q_min=", q.dat.data.min())
+rho_prev = rho
+residual = assemble((rho - rho_prev - dt * div(Fnew))**2 *dx)
+print("residual=",residual)
 
 #Apply the limiter to q and density first and find beta, alpha.
 
 while t < T - 0.5*dt:
 
     solv1_rho.solve()
+    rho_prev = rho
     rho.assign(rho + drho)
 
     Fssolver.solve()
     Fsf,Fsi = split(Fs)
     Fnew = Fsf + Fsi
     Fn  = 0.5*(dot((Fnew), n) + abs(dot((Fnew), n)))
+    residual = assemble((rho - rho_prev - dt * div(Fnew))**2 *dx)
+    print("residual=",residual)
 
 
     solv1_q.solve()
