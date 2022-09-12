@@ -171,8 +171,8 @@ betac.assign(beta_expr_colin)
 #apply the limiting scheme
 rho.project(rho_hat_bar + betam * (rho - rho_hat_bar))
 
-print("molin=", assemble(betam))
-print("colin=", assemble(betac))
+print("molin=", norm(betam))
+print("colin=", norm(betac))
 
 while t < T - 0.5*dt:
     #solve the density
@@ -200,8 +200,8 @@ while t < T - 0.5*dt:
     beta1c.assign(beta1_expr_colin)
     #apply the limiting scheme
     rho1.project(rho1_hat_bar + beta1m * (rho1 - rho1_hat_bar))
-    print("1molin=", beta1m)
-    print("1colin=", beta1c)
+    print("1molin=", norm(beta1m))
+    print("1colin=", norm(beta1c))
 
 
     #second stage
@@ -224,8 +224,8 @@ while t < T - 0.5*dt:
     beta1c.assign(beta1_expr_colin)
     #apply the limiting scheme
     rho1.project(rho1_hat_bar + beta1m * (rho1 - rho1_hat_bar))
-    print("molin1=", beta1m)
-    print("colin1=", beta1c)
+    print("molin1=", norm(beta1m))
+    print("colin1=", norm(beta1c))
     
     #Calculate for the second stage rho value.
     rho2.assign(0.75*rho + 0.25*(rho1))
@@ -236,8 +236,8 @@ while t < T - 0.5*dt:
     beta2c.assign(beta2_expr_colin)
     #apply the limiting scheme
     rho2.project(rho2_hat_bar + beta2m * (rho2 - rho2_hat_bar))
-    print("2molin=", beta2m)
-    print("2colin=", beta2c)
+    print("2molin=", norm(beta2m))
+    print("2colin=", norm(beta2c))
 
 
     #third stage
@@ -260,8 +260,8 @@ while t < T - 0.5*dt:
     beta2c.assign(beta2_expr_colin)
     #apply the limiting scheme
     rho2.project(rho2_hat_bar + beta2m * (rho2 - rho2_hat_bar))
-    print("2molin=", beta2m)
-    print("2colin=", beta2c)
+    print("molin2=", norm(beta2m))
+    print("colin2=", norm(beta2c))
 
     #Calculate for the rho value.
     rho.assign((1.0/3.0)*rho + (2.0/3.0)*(rho2))
@@ -272,8 +272,8 @@ while t < T - 0.5*dt:
     betac.assign(beta_expr_colin)
     #apply the limiting scheme
     rho.project(rho_hat_bar + betam * (rho - rho_hat_bar))
-    print("molin=", betam)
-    print("colin=", betac)
+    print("molin=", norm(betam))
+    print("colin=", norm(betac))
 
     print(rho.dat.data.max())
     print(rho.dat.data.min())
