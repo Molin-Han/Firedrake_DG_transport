@@ -93,9 +93,13 @@ Courant_minus.assign(Courant_num_minus /Courant_denom_minus )
 
 rho1 = Function(V); rho2 = Function(V)
 
-beta = Function(DG1)
-beta1 = Function(DG1)
-beta2 = Function(DG1)
+betam = Function(DG1)
+beta1m = Function(DG1)
+beta2m = Function(DG1)
+
+betac = Function(DG1)
+beta1c = Function(DG1)
+beta2c = Function(DG1)
 
 rho_bar = Function(DG1)
 rho_hat_bar = Function(DG1)
@@ -162,12 +166,14 @@ rho_bar.project(rho)
 limiter.apply(rho)
 rho_hat_bar.project(rho)
 #here rho is rho_hat as the limiter is applied
-#beta.assign(beta_expr_molin)
-beta.assign(beta_expr_colin)
+betam.assign(beta_expr_molin)
+betac.assign(beta_expr_colin)
 #apply the limiting scheme
-rho.project(rho_hat_bar + beta * (rho - rho_hat_bar))
+rho.project(rho_hat_bar + betam * (rho - rho_hat_bar))
 print(rho.dat.data.max())
 print(rho.dat.data.min())
+print("molin=", betam)
+print("colin=", betac)
 
 while t < T - 0.5*dt:
     #solve the density
@@ -191,10 +197,12 @@ while t < T - 0.5*dt:
     rho1_bar.project(rho1)
     limiter.apply(rho1)
     rho1_hat_bar.project(rho1)
-    #beta1.assign(beta1_expr_molin)
-    beta1.assign(beta1_expr_colin)
+    beta1m.assign(beta1_expr_molin)
+    beta1c.assign(beta1_expr_colin)
     #apply the limiting scheme
-    rho1.project(rho1_hat_bar + beta1 * (rho1 - rho1_hat_bar))
+    rho1.project(rho1_hat_bar + beta1m * (rho1 - rho1_hat_bar))
+    print("1molin=", beta1m)
+    print("1colin=", beta1c)
 
 
     #second stage
@@ -213,20 +221,24 @@ while t < T - 0.5*dt:
     #limiter apply to rho1 another time.
     limiter.apply(rho1)
     rho1_hat_bar.project(rho1)
-    #beta1.assign(beta1_expr_molin)
-    beta1.assign(beta1_expr_colin)
+    beta1m.assign(beta1_expr_molin)
+    beta1c.assign(beta1_expr_colin)
     #apply the limiting scheme
-    rho1.project(rho1_hat_bar + beta1 * (rho1 - rho1_hat_bar))
+    rho1.project(rho1_hat_bar + beta1m * (rho1 - rho1_hat_bar))
+    print("molin1=", beta1m)
+    print("colin1=", beta1c)
     
     #Calculate for the second stage rho value.
     rho2.assign(0.75*rho + 0.25*(rho1))
     rho2_bar.project(rho2)
     limiter.apply(rho2)
     rho2_hat_bar.project(rho2)
-    #beta2.assign(beta2_expr_molin)
-    beta2.assign(beta2_expr_colin)
+    beta2m.assign(beta2_expr_molin)
+    beta2c.assign(beta2_expr_colin)
     #apply the limiting scheme
-    rho2.project(rho2_hat_bar + beta2 * (rho2 - rho2_hat_bar))
+    rho2.project(rho2_hat_bar + beta2m * (rho2 - rho2_hat_bar))
+    print("2molin=", beta2m)
+    print("2colin=", beta2c)
 
 
     #third stage
@@ -245,20 +257,24 @@ while t < T - 0.5*dt:
     #limiter apply to rho2 another time.
     limiter.apply(rho2)
     rho2_hat_bar.project(rho2)
-    #beta2.assign(beta2_expr_molin)
-    beta2.assign(beta2_expr_colin)
+    beta2m.assign(beta2_expr_molin)
+    beta2c.assign(beta2_expr_colin)
     #apply the limiting scheme
-    rho2.project(rho2_hat_bar + beta2 * (rho2 - rho2_hat_bar))
+    rho2.project(rho2_hat_bar + beta2m * (rho2 - rho2_hat_bar))
+    print("2molin=", beta2m)
+    print("2colin=", beta2c)
 
     #Calculate for the rho value.
     rho.assign((1.0/3.0)*rho + (2.0/3.0)*(rho2))
     rho_bar.project(rho)
     limiter.apply(rho)
     rho_hat_bar.project(rho)
-    #beta.assign(beta_expr_molin)
-    beta.assign(beta_expr_colin)
+    betam.assign(beta_expr_molin)
+    betac.assign(beta_expr_colin)
     #apply the limiting scheme
-    rho.project(rho_hat_bar + beta * (rho - rho_hat_bar))
+    rho.project(rho_hat_bar + betam * (rho - rho_hat_bar))
+    print("molin=", betam)
+    print("colin=", betac)
 
     print(rho.dat.data.max())
     print(rho.dat.data.min())
