@@ -152,7 +152,7 @@ print("rho_min=", rho.dat.data.min())
 print("q_max=", q.dat.data.max())
 print("q_min=", q.dat.data.min())
 rho_prev = rho
-residual = assemble((rho - rho_prev - dt * div(Fnew))**2 *dx)
+residual = assemble(pow(rho - rho_prev - dt * div(Fnew),2) *dx)
 print("residual=",residual)
 
 #Apply the limiter to q and density first and find beta, alpha.
@@ -167,7 +167,7 @@ while t < T - 0.5*dt:
     Fsf,Fsi = split(Fs)
     Fnew = Fsf + Fsi
     Fn  = 0.5*(dot((Fnew), n) + abs(dot((Fnew), n)))
-    residual = assemble((rho - rho_prev - dt * div(Fnew))**2 *dx)
+    residual = assemble(pow(rho - rho_prev - dt * div(Fnew),2) *dx)
     print("residual=",residual)
 
 
