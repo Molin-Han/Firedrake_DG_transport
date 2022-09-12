@@ -170,10 +170,9 @@ betam.assign(beta_expr_molin)
 betac.assign(beta_expr_colin)
 #apply the limiting scheme
 rho.project(rho_hat_bar + betam * (rho - rho_hat_bar))
-print(rho.dat.data.max())
-print(rho.dat.data.min())
-print("molin=", betam)
-print("colin=", betac)
+
+print("molin=", assemble(betam))
+print("colin=", assemble(betac))
 
 while t < T - 0.5*dt:
     #solve the density
