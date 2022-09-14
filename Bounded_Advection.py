@@ -358,11 +358,11 @@ prob3_rho = LinearVariationalProblem(a, L3_rho, drho)
 solv3_rho = LinearVariationalSolver(prob3_rho, solver_parameters=params)
 
 
-prob1_q = LinearVariationalProblem(a, L1_q, dq)
+prob1_q = LinearVariationalProblem(b, L1_q, dq)
 solv1_q = LinearVariationalSolver(prob1_q, solver_parameters=params)
-prob2_q = LinearVariationalProblem(a, L2_q, dq)
+prob2_q = LinearVariationalProblem(b, L2_q, dq)
 solv2_q = LinearVariationalSolver(prob2_q, solver_parameters=params)
-prob3_q = LinearVariationalProblem(a, L3_q, dq)
+prob3_q = LinearVariationalProblem(b, L3_q, dq)
 solv3_q = LinearVariationalSolver(prob3_q, solver_parameters=params)
 
 

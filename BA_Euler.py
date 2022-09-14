@@ -134,7 +134,7 @@ dq = Function(V)
 prob1_rho = LinearVariationalProblem(a, L1_rho, drho)
 solv1_rho = LinearVariationalSolver(prob1_rho, solver_parameters=params)
 
-prob1_q = LinearVariationalProblem(a, L1_q, dq)
+prob1_q = LinearVariationalProblem(b, L1_q, dq)
 solv1_q = LinearVariationalSolver(prob1_q, solver_parameters=params)
 
 
