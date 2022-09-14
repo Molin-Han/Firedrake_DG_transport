@@ -4,7 +4,8 @@ import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 
 #mesh
-mesh = UnitSquareMesh(40, 40)
+mesh = PeriodicUnitSquareMesh(40,40)
+#mesh = UnitSquareMesh(40, 40)
 
 #space
 V = FunctionSpace(mesh, "DG", 1)
@@ -43,7 +44,7 @@ qs = []
 
 #Initial setting for time
 #time period
-T = 2 * math.pi/200
+T = 2 * math.pi
 dt = 2* math.pi /1200
 dtc = Constant(dt)
 rho_in = Constant(1.0)
@@ -145,7 +146,6 @@ limiter_q = VertexBasedLimiter(V)
 func = Function(DG1)
 rho_prev = Function(DG1)
 
-funcs =[]
 
 
 t = 0.0
@@ -166,7 +166,7 @@ print("q_min=", q.dat.data.min())
 #print("residual=",residual)
 
 
-f = File('flux.pvd')
+f = File('flux1.pvd')
 
 #Apply the limiter to q and density first and find beta, alpha.
 
@@ -181,10 +181,9 @@ while t < T - 0.5*dt:
 
     func.project(drho + dt * div(Fnew))
     print("func_norm=",norm(func))
-    funcs.append(func)
 
-    f.write(func)
-    residual = assemble(pow(rho - rho_prev + dt * div(Fnew),2) *dx)
+
+    residual = assemble(pow(drho + dt * div(Fnew),2) *dx)
     print("residual=",residual)
 
 
@@ -206,6 +205,7 @@ while t < T - 0.5*dt:
     t += dt
 
     if step % output_freq == 0:
+        f.write(func)
         rhos.append(rho.copy(deepcopy=True))
         qs.append(q.copy(deepcopy=True))
         print("t=", t)
