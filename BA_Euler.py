@@ -117,9 +117,8 @@ Fssolver = LinearVariationalSolver(Fsproblem,solver_parameters=params)
 Fssolver.solve()
 Fsf,Fsi = split(Fs)
 Fnew = Fsf+Fsi
-#Fnew = Fs
-Fn = Function(DG1)
-Fn=0.5*(dot((Fnew), n) + abs(dot((Fnew), n)))
+#Fn = Function(DG1)
+Fn=(0.5*(dot((Fnew), n) + abs(dot((Fnew), n))))
 
 #variational problem for q
 L1_q = dtc*(q*dot(grad(phi),Fnew)*dx
@@ -236,10 +235,8 @@ def animate(q):
 interval = 1e3 * output_freq * dt
 animation_rho = FuncAnimation(fig, animate, frames=rhos, interval=interval)
 animation_q = FuncAnimation(fig, animate, frames=qs, interval=interval)
-animation_func = FuncAnimation(fig, animate, frames=funcs, interval=interval)
 try:
     animation_rho.save("BA_noq_rho_1.mp4", writer="ffmpeg")
     animation_q.save("BA_noq_q_1.mp4", writer="ffmpeg")
-    animation_func.save("func.mp4",writer="ffmpeg")
 except:
     print("Failed to write movie! Try installing `ffmpeg`.")
