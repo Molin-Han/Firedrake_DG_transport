@@ -7,7 +7,7 @@ from matplotlib.animation import FuncAnimation
 mesh = UnitSquareMesh(40, 40)
 
 #space
-V = FunctionSpace(mesh, "DG", 0)
+V = FunctionSpace(mesh, "DG", 1)
 W = VectorFunctionSpace(mesh, "CG", 1)
 
 x, y = SpatialCoordinate(mesh)
@@ -43,8 +43,8 @@ qs = []
 
 #Initial setting for time
 #time period
-T = 2*math.pi
-dt = T/1200
+T = 2 * math.pi/200
+dt = 2* math.pi /1200
 dtc = Constant(dt)
 rho_in = Constant(1.0)
 
@@ -65,7 +65,7 @@ un = 0.5*(dot(u, n) + abs(dot(u, n)))
 
 
 
-DG1 = FunctionSpace(mesh, "DG", 0)
+DG1 = FunctionSpace(mesh, "DG", 1)
 One = Function(DG1).assign(1.0)
 v = TestFunction(DG1)
 
@@ -86,8 +86,8 @@ drho = Function(V)
 # Surface Flux equation - build RT2 out of BDM1 and TDG1
 
 Fluxes = FunctionSpace(mesh,"BDM",1)
-#Inners = VectorFunctionSpace(mesh,"DG",0)
-Inners = FunctionSpace(mesh,"DRT",1)
+Inners = VectorFunctionSpace(mesh,"DG",0)
+#Inners = FunctionSpace(mesh,"DRT",1)
 W = MixedFunctionSpace((Fluxes,Inners))
 
 wI = TestFunction(Inners)
@@ -97,23 +97,27 @@ wF,wI = TestFunctions(W)
 uF,uI = TrialFunctions(W)
 
 aFs = (
-    (inner(wF('+'),n('+'))*inner(uF('+'),n('+')) + 
+    0.5 * (inner(wF('+'),n('+'))*inner(uF('+'),n('+')) + 
      inner(wF('-'),n('-'))*inner(uF('-'),n('-')))*dS
+    +inner(wF,n)*inner(uF,n) * ds
     + inner(wI,uI)*dx
     )
 LFs = (
-    2.0*(inner(wF('+'),n('+'))*un('+')*rho('+') 
+    (inner(wF('+'),n('+'))*un('+')*rho('+') 
          + inner(wF('-'),n('-'))*un('-')*rho('-'))*dS
+    + inner(wF,n)* un * rho * ds
+    + inner(wF,n)* (1-un) * rho_in * ds
     + inner(wI,u)*rho*dx
     )
 
 Fs = Function(W)
-
+params = {'ksp_type': 'preonly', 'pc_type': 'bjacobi', 'sub_pc_type': 'ilu'}
 Fsproblem = LinearVariationalProblem(aFs, LFs, Fs)
-Fssolver = LinearVariationalSolver(Fsproblem)
+Fssolver = LinearVariationalSolver(Fsproblem,solver_parameters=params)
 Fssolver.solve()
 Fsf,Fsi = split(Fs)
 Fnew = Fsf+Fsi
+#Fnew = Fs
 Fn = Function(DG1)
 Fn=0.5*(dot((Fnew), n) + abs(dot((Fnew), n)))
 
@@ -126,7 +130,7 @@ L1_q = dtc*(q*dot(grad(phi),Fnew)*dx
 dq = Function(V)
 
 # set solvers for rho and q.
-params = {'ksp_type': 'preonly', 'pc_type': 'bjacobi', 'sub_pc_type': 'ilu'}
+
 prob1_rho = LinearVariationalProblem(a, L1_rho, drho)
 solv1_rho = LinearVariationalSolver(prob1_rho, solver_parameters=params)
 
@@ -137,6 +141,13 @@ solv1_q = LinearVariationalSolver(prob1_q, solver_parameters=params)
 #Set Kuzmin limiter
 limiter_rho = VertexBasedLimiter(V)
 limiter_q = VertexBasedLimiter(V)
+
+
+func = Function(DG1)
+rho_prev = Function(DG1)
+
+funcs =[]
+
 
 t = 0.0
 step = 0
@@ -151,23 +162,30 @@ print("rho_min=", rho.dat.data.min())
 
 print("q_max=", q.dat.data.max())
 print("q_min=", q.dat.data.min())
-rho_prev = rho
-residual = assemble(pow(rho - rho_prev - dt * div(Fnew),2) *dx)
-print("residual=",residual)
+
+#residual = assemble(pow(rho - rho_prev - dt * div(Fnew),2) *dx)
+#print("residual=",residual)
+
+
+f = File('flux.pvd')
 
 #Apply the limiter to q and density first and find beta, alpha.
 
 while t < T - 0.5*dt:
 
     solv1_rho.solve()
-    rho_prev = rho
+    rho_prev.assign(rho)
+    Fssolver.solve()
     rho.assign(rho + drho)
 
-    Fssolver.solve()
-    Fsf,Fsi = split(Fs)
-    Fnew = Fsf + Fsi
-    Fn  = 0.5*(dot((Fnew), n) + abs(dot((Fnew), n)))
-    residual = assemble(pow(rho - rho_prev - dt * div(Fnew),2) *dx)
+
+
+    func.project(drho + dt * div(Fnew))
+    print("func_norm=",norm(func))
+    funcs.append(func)
+
+    f.write(func)
+    residual = assemble(pow(rho - rho_prev + dt * div(Fnew),2) *dx)
     print("residual=",residual)
 
 
@@ -218,8 +236,10 @@ def animate(q):
 interval = 1e3 * output_freq * dt
 animation_rho = FuncAnimation(fig, animate, frames=rhos, interval=interval)
 animation_q = FuncAnimation(fig, animate, frames=qs, interval=interval)
+animation_func = FuncAnimation(fig, animate, frames=funcs, interval=interval)
 try:
     animation_rho.save("BA_noq_rho_1.mp4", writer="ffmpeg")
     animation_q.save("BA_noq_q_1.mp4", writer="ffmpeg")
+    animation_func.save("func.mp4",writer="ffmpeg")
 except:
     print("Failed to write movie! Try installing `ffmpeg`.")
