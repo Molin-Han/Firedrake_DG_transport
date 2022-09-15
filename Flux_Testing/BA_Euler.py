@@ -1,3 +1,4 @@
+from importlib.metadata import metadata
 from firedrake import *
 import math
 import matplotlib.pyplot as plt
@@ -8,14 +9,15 @@ mesh = PeriodicUnitSquareMesh(40,40)
 #mesh = UnitSquareMesh(40, 40)
 
 #space
-V = FunctionSpace(mesh, "DG", 1)
+deg= 1
+V = FunctionSpace(mesh, "DG", deg)
 W = VectorFunctionSpace(mesh, "CG", 1)
 
 x, y = SpatialCoordinate(mesh)
 #Initial setting for the problem
 #velocity field
 #velocity = as_vector(( (-0.05*x - y + 0.475 ) , ( x - 0.05*y-0.525)))
-velocity = as_vector(( (0.5 - y ) , ( x - 0.5)))
+velocity = as_vector(( (-sin(2*math.pi*x)*cos(2*math.pi*y) ) , ( cos(2*math.pi*x)*sin(math.pi*y))))
 u = Function(W).interpolate(velocity)
 
 #initial condition for the atomsphere
@@ -44,7 +46,7 @@ qs = []
 
 #Initial setting for time
 #time period
-T = 2 * math.pi
+T = 2 * math.pi /200
 dt = 2* math.pi /1200
 dtc = Constant(dt)
 rho_in = Constant(1.0)
@@ -66,7 +68,7 @@ un = 0.5*(dot(u, n) + abs(dot(u, n)))
 
 
 
-DG1 = FunctionSpace(mesh, "DG", 1)
+DG1 = FunctionSpace(mesh, "DG", deg)
 One = Function(DG1).assign(1.0)
 v = TestFunction(DG1)
 
@@ -77,7 +79,7 @@ v = TestFunction(DG1)
 L1_rho = dtc*(rho*dot(grad(phi),u)*dx
           - conditional(dot(u, n) < 0, phi*dot(u, n)*rho_in, 0.0)*ds
           - conditional(dot(u, n) > 0, phi*dot(u, n)*rho, 0.0)*ds
-          - (phi('+') - phi('-'))*(un('+')*rho('+') - un('-')*rho('-'))*dS)
+          - (phi('+') - phi('-'))*(un('+')*rho('+') - un('-')*rho('-'))*dS(metadata={'quadrature_degree':4}))
 
 
 drho = Function(V)
@@ -86,56 +88,61 @@ drho = Function(V)
 #Flux Problem
 # Surface Flux equation - build RT2 out of BDM1 and TDG1
 
-Fluxes = FunctionSpace(mesh,"BDM",1)
+#Fluxes = FunctionSpace(mesh,"BDM",1)
+Fluxes= FunctionSpace(mesh,"RT",2)
 Inners = VectorFunctionSpace(mesh,"DG",0)
 #Inners = FunctionSpace(mesh,"DRT",1)
+#Trials = FunctionSpace(mesh,"RT",2)
 W = MixedFunctionSpace((Fluxes,Inners))
 
-wI = TestFunction(Inners)
-assemble(inner(wI,u)*dx)
+
+
+
 
 wF,wI = TestFunctions(W)
-uF,uI = TrialFunctions(W)
+uF,phi = TrialFunctions(W)
+
 
 aFs = (
     0.5 * (inner(wF('+'),n('+'))*inner(uF('+'),n('+')) + 
-     inner(wF('-'),n('-'))*inner(uF('-'),n('-')))*dS
+     inner(wF('-'),n('-'))*inner(uF('-'),n('-')))*dS(metadata={'quadrature_degree':4})
     +inner(wF,n)*inner(uF,n) * ds
-    + inner(wI,uI)*dx
+    + inner(wI,uF)*dx
+    + inner(wF,phi)*dx
     )
 LFs = (
     (inner(wF('+'),n('+'))*un('+')*rho('+') 
-         + inner(wF('-'),n('-'))*un('-')*rho('-'))*dS
+         + inner(wF('-'),n('-'))*un('-')*rho('-'))*dS(metadata={'quadrature_degree':4})
     + inner(wF,n)* un * rho * ds
     + inner(wF,n)* (1-un) * rho_in * ds
     + inner(wI,u)*rho*dx
     )
 
 Fs = Function(W)
-params = {'ksp_type': 'preonly', 'pc_type': 'bjacobi', 'sub_pc_type': 'ilu'}
+params = {'ksp_type': 'preonly', 'pc_type': 'lu','mat_type': 'aij','pc_factor_mat_solver_type':'mumps'}
 Fsproblem = LinearVariationalProblem(aFs, LFs, Fs)
 Fssolver = LinearVariationalSolver(Fsproblem,solver_parameters=params)
 Fssolver.solve()
-Fsf,Fsi = split(Fs)
-Fnew = Fsf+Fsi
+Fsf,phi = split(Fs)
+Fnew = Fsf
 #Fn = Function(DG1)
 Fn=(0.5*(dot((Fnew), n) + abs(dot((Fnew), n))))
 
 #variational problem for q
-L1_q = dtc*(q*dot(grad(phi),Fnew)*dx
-          - conditional(dot(Fnew, n) < 0, phi*dot(Fnew, n)*q_in, 0.0)*ds
-          - conditional(dot(Fnew, n) > 0, phi*dot(Fnew, n)*q, 0.0)*ds
-          - (phi('+') - phi('-'))*(Fn('+')*q('+') - Fn('-')*q('-'))*dS)
+#L1_q = dtc*(q*dot(grad(phi),Fnew)*dx
+          #- conditional(dot(Fnew, n) < 0, phi*dot(Fnew, n)*q_in, 0.0)*ds
+          #- conditional(dot(Fnew, n) > 0, phi*dot(Fnew, n)*q, 0.0)*ds
+          #- (phi('+') - phi('-'))*(Fn('+')*q('+') - Fn('-')*q('-'))*dS)
 
 dq = Function(V)
 
 # set solvers for rho and q.
-
+params1 = {'ksp_type': 'preonly', 'pc_type': 'bjacobi', 'sub_pc_type': 'ilu'}
 prob1_rho = LinearVariationalProblem(a, L1_rho, drho)
-solv1_rho = LinearVariationalSolver(prob1_rho, solver_parameters=params)
+solv1_rho = LinearVariationalSolver(prob1_rho, solver_parameters=params1)
 
-prob1_q = LinearVariationalProblem(b, L1_q, dq)
-solv1_q = LinearVariationalSolver(prob1_q, solver_parameters=params)
+#prob1_q = LinearVariationalProblem(b, L1_q, dq)
+#solv1_q = LinearVariationalSolver(prob1_q, solver_parameters=params1)
 
 
 #Set Kuzmin limiter
@@ -172,23 +179,25 @@ f = File('flux1.pvd')
 
 while t < T - 0.5*dt:
 
+    Fssolver.solve()
     solv1_rho.solve()
     rho_prev.assign(rho)
-    Fssolver.solve()
+
     rho.assign(rho + drho)
 
 
 
     func.project(drho + dt * div(Fnew))
     print("func_norm=",norm(func))
+    f.write(func)
 
 
-    residual = assemble(pow(drho + dt * div(Fnew),2) *dx)
+    residual = norm(func)
     print("residual=",residual)
 
 
-    solv1_q.solve()
-    q.assign(q + dq)
+    #solv1_q.solve()
+    #q.assign(q + dq)
 
 
 
@@ -205,7 +214,7 @@ while t < T - 0.5*dt:
     t += dt
 
     if step % output_freq == 0:
-        f.write(func)
+
         rhos.append(rho.copy(deepcopy=True))
         qs.append(q.copy(deepcopy=True))
         print("t=", t)
