@@ -154,7 +154,6 @@ func = Function(DG1)
 rho_prev = Function(DG1)
 
 
-
 t = 0.0
 step = 0
 output_freq = 20
