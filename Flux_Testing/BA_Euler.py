@@ -5,8 +5,8 @@ import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 
 #mesh
-mesh = PeriodicUnitSquareMesh(40,40)
-#mesh = UnitSquareMesh(40, 40)
+#mesh = PeriodicUnitSquareMesh(40,40)
+mesh = UnitSquareMesh(40, 40)
 
 #space
 deg= 1
@@ -171,7 +171,7 @@ print("q_min=", q.dat.data.min())
 #print("residual=",residual)
 
 
-f = File('flux1.pvd')
+f = File('flux2.pvd')
 
 #Apply the limiter to q and density first and find beta, alpha.
 
