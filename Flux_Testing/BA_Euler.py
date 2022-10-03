@@ -47,7 +47,7 @@ qs = []
 #Initial setting for time
 #time period
 T = 2 * math.pi /200
-dt = 2* math.pi /1200
+dt = 2 * math.pi /1200
 dtc = Constant(dt)
 rho_in = Constant(1.0)
 
@@ -100,7 +100,7 @@ W = MixedFunctionSpace((Fluxes,Inners))
 
 
 wF,wI = TestFunctions(W)
-uF,phi = TrialFunctions(W)
+uF,phi_flux = TrialFunctions(W)
 
 
 aFs = (
@@ -108,7 +108,7 @@ aFs = (
      inner(wF('-'),n('-'))*inner(uF('-'),n('-')))*dS(metadata={'quadrature_degree':4})
     +inner(wF,n)*inner(uF,n) * ds
     + inner(wI,uF)*dx
-    + inner(wF,phi)*dx
+    + inner(wF,phi_flux)*dx
     )
 LFs = (
     (inner(wF('+'),n('+'))*un('+')*rho('+') 
@@ -123,16 +123,15 @@ params = {'ksp_type': 'preonly', 'pc_type': 'lu','mat_type': 'aij','pc_factor_ma
 Fsproblem = LinearVariationalProblem(aFs, LFs, Fs)
 Fssolver = LinearVariationalSolver(Fsproblem,solver_parameters=params)
 Fssolver.solve()
-Fsf,phi = split(Fs)
-Fnew = Fsf
+Fsf,phi_flux = split(Fs)
 #Fn = Function(DG1)
-Fn=(0.5*(dot((Fnew), n) + abs(dot((Fnew), n))))
+Fn=(0.5*(dot((Fsf), n) + abs(dot((Fsf), n))))
 
 #variational problem for q
-#L1_q = dtc*(q*dot(grad(phi),Fnew)*dx
-          #- conditional(dot(Fnew, n) < 0, phi*dot(Fnew, n)*q_in, 0.0)*ds
-          #- conditional(dot(Fnew, n) > 0, phi*dot(Fnew, n)*q, 0.0)*ds
-          #- (phi('+') - phi('-'))*(Fn('+')*q('+') - Fn('-')*q('-'))*dS)
+L1_q = dtc*(q*dot(grad(phi),Fsf)*dx
+          - conditional(dot(Fsf, n) < 0, phi*dot(Fsf, n)*q_in, 0.0)*ds
+          - conditional(dot(Fsf, n) > 0, phi*dot(Fsf, n)*q, 0.0)*ds
+          - (phi('+') - phi('-'))*(Fn('+')*q('+') - Fn('-')*q('-'))*dS)
 
 dq = Function(V)
 
@@ -141,8 +140,8 @@ params1 = {'ksp_type': 'preonly', 'pc_type': 'bjacobi', 'sub_pc_type': 'ilu'}
 prob1_rho = LinearVariationalProblem(a, L1_rho, drho)
 solv1_rho = LinearVariationalSolver(prob1_rho, solver_parameters=params1)
 
-#prob1_q = LinearVariationalProblem(b, L1_q, dq)
-#solv1_q = LinearVariationalSolver(prob1_q, solver_parameters=params1)
+prob1_q = LinearVariationalProblem(b, L1_q, dq)
+solv1_q = LinearVariationalSolver(prob1_q, solver_parameters=params1)
 
 
 #Set Kuzmin limiter
@@ -186,7 +185,7 @@ while t < T - 0.5*dt:
 
 
 
-    func.project(drho + dt * div(Fnew))
+    func.project(drho + dt * div(Fsf))
     print("func_norm=",norm(func))
     f.write(func)
 
