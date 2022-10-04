@@ -5,8 +5,8 @@ import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 
 #mesh
-#mesh = PeriodicUnitSquareMesh(40,40)
-mesh = UnitSquareMesh(40, 40)
+mesh = PeriodicUnitSquareMesh(40,40)
+#mesh = UnitSquareMesh(40, 40)
 
 #space
 deg= 1

@@ -4,10 +4,14 @@ import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 
 #mesh
-mesh = UnitSquareMesh(40, 40)
+#for Flux to be solved correctly
+mesh = PeriodicSquareMesh(40,40)
+#mesh = UnitSquareMesh(40, 40)
 
 #space
-V = FunctionSpace(mesh, "DG", 1)
+#degree of space
+deg = 1
+V = FunctionSpace(mesh, "DG", deg)
 W = VectorFunctionSpace(mesh, "CG", 1)
 
 x, y = SpatialCoordinate(mesh)
@@ -69,9 +73,11 @@ def both(vec):
     return vec('+') + vec('-')
 
 
-DG1 = FunctionSpace(mesh, "DG", 1)
+DG1 = FunctionSpace(mesh, "DG", deg)
 One = Function(DG1).assign(1.0)
 v = TestFunction(DG1)
+
+
 #c+
 Courant_num_plus= Function(DG1)
 Courant_num_form_plus = dt*(
@@ -158,35 +164,36 @@ drho = Function(V)
 
 #Flux Problem
 # Surface Flux equation - build RT2 out of BDM1 and TDG1
-Fluxes1 = FunctionSpace(mesh,"BDM",1)
+Fluxes1 = FunctionSpace(mesh,"RT",2)
 Inners1 = VectorFunctionSpace(mesh,"DG",0)
 W1 = MixedFunctionSpace((Fluxes1,Inners1))
 
-wI1 = TestFunction(Inners1)
-assemble(inner(wI1,u)*dx)
 
 wF1,wI1 = TestFunctions(W1)
-uF1,uI1 = TrialFunctions(W1)
+uF1,phi1_flux = TrialFunctions(W1)
 
 aFs1 = (
-    (inner(wF1('+'),n('+'))*inner(uF1('+'),n('+')) + 
-     inner(wF1('-'),n('-'))*inner(uF1('-'),n('-')))*dS
-    + inner(wI1,uI1)*dx
+    0.5 * (inner(wF1('+'),n('+'))*inner(uF1('+'),n('+')) + 
+     inner(wF1('-'),n('-'))*inner(uF1('-'),n('-')))*dS(metadata={'quadrature_degree':4})
+    +inner(wF1,n)*inner(uF1,n) * ds
+    + inner(wI1,uF1)*dx
+    + inner(wF1,phi1_flux)*dx
     )
 LFs1 = (
-    2.0*(inner(wF1('+'),n('+'))*un('+')*rho1('+') 
-         + inner(wF1('-'),n('-'))*un('-')*rho1('-'))*dS
-    + inner(wI1,u)*rho1*dx
+    (inner(wF1('+'),n('+'))*un('+')*rho('+') 
+         + inner(wF1('-'),n('-'))*un('-')*rho('-'))*dS(metadata={'quadrature_degree':4})
+    + inner(wF1,n)* un * rho * ds
+    + inner(wF1,n)* (1-un) * rho_in * ds
+    + inner(wI1,u)*rho*dx
     )
 
 Fs1 = Function(W1)
-
+params_flux = {'ksp_type': 'preonly', 'pc_type': 'lu','mat_type': 'aij','pc_factor_mat_solver_type':'mumps'}
 Fsproblem1 = LinearVariationalProblem(aFs1, LFs1, Fs1)
-Fssolver1 = LinearVariationalSolver(Fsproblem1)
+Fssolver1 = LinearVariationalSolver(Fsproblem1,solver_parameters=params_flux)
 Fssolver1.solve()
-Fsf1,Fsi1 = split(Fs1)
-Fnew1 = Fsf1 + Fsi1
-Fn1  = 0.5*(dot((Fnew1), n) + abs(dot((Fnew1), n)))
+Fsf1,phi1_flux = split(Fs1)
+Fn1  = 0.5*(dot((Fsf1), n) + abs(dot((Fsf1), n)))
 
 
 
