@@ -194,8 +194,8 @@ while t < T - 0.5*dt:
     print("residual=",residual)
 
 
-    #solv1_q.solve()
-    #q.assign(q + dq)
+    solv1_q.solve()
+    q.assign(q + dq)
 
 
 

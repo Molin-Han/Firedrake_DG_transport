@@ -197,39 +197,40 @@ Fn1  = 0.5*(dot((Fsf1), n) + abs(dot((Fsf1), n)))
 
 
 
-Fluxes2 = FunctionSpace(mesh,"BDM",1)
+Fluxes2 = FunctionSpace(mesh,"RT",2)
 Inners2 = VectorFunctionSpace(mesh,"DG",0)
 W2 = MixedFunctionSpace((Fluxes2,Inners2))
 
-wI2 = TestFunction(Inners2)
-assemble(inner(wI2,u)*dx)
 
 wF2,wI2 = TestFunctions(W2)
-uF2,uI2 = TrialFunctions(W2)
+uF2,phi2_flux = TrialFunctions(W2)
+
 
 aFs2 = (
-    (inner(wF2('+'),n('+'))*inner(uF2('+'),n('+')) + 
-     inner(wF2('-'),n('-'))*inner(uF2('-'),n('-')))*dS
-    + inner(wI2,uI2)*dx
+    0.5 * (inner(wF2('+'),n('+'))*inner(uF2('+'),n('+')) + 
+     inner(wF2('-'),n('-'))*inner(uF2('-'),n('-')))*dS(metadata={'quadrature_degree':4})
+    +inner(wF2,n)*inner(uF2,n) * ds
+    + inner(wI2,uF2)*dx
+    + inner(wF2,phi2_flux)*dx
     )
 LFs2 = (
-    2.0*(inner(wF2('+'),n('+'))*un('+')*rho2('+') 
-         + inner(wF2('-'),n('-'))*un('-')*rho2('-'))*dS
-    + inner(wI2,u)*rho2*dx
+    (inner(wF2('+'),n('+'))*un('+')*rho('+') 
+         + inner(wF2('-'),n('-'))*un('-')*rho('-'))*dS(metadata={'quadrature_degree':4})
+    + inner(wF2,n)* un * rho * ds
+    + inner(wF2,n)* (1-un) * rho_in * ds
+    + inner(wI2,u)*rho*dx
     )
 
 Fs2 = Function(W2)
-
 Fsproblem2 = LinearVariationalProblem(aFs2, LFs2, Fs2)
-Fssolver2 = LinearVariationalSolver(Fsproblem2)
+Fssolver2 = LinearVariationalSolver(Fsproblem2,solver_parameters=params_flux)
 Fssolver2.solve()
-Fsf2,Fsi2 = split(Fs2)
-Fnew2 = Fsf2 + Fsi2
-Fn2  = 0.5*(dot((Fnew2), n) + abs(dot((Fnew2), n)))
+Fsf2,phi2_flux = split(Fs2)
+Fn2  = 0.5*(dot((Fsf2), n) + abs(dot((Fsf2), n)))
 
 
 
-Fluxes = FunctionSpace(mesh,"BDM",1)
+Fluxes = FunctionSpace(mesh,"RT",2)
 Inners = VectorFunctionSpace(mesh,"DG",0)
 W = MixedFunctionSpace((Fluxes,Inners))
 
@@ -237,27 +238,28 @@ wI = TestFunction(Inners)
 assemble(inner(wI,u)*dx)
 
 wF,wI = TestFunctions(W)
-uF,uI = TrialFunctions(W)
+uF,phi_flux = TrialFunctions(W)
 
 aFs = (
-    (inner(wF('+'),n('+'))*inner(uF('+'),n('+')) + 
-     inner(wF('-'),n('-'))*inner(uF('-'),n('-')))*dS
-    + inner(wI,uI)*dx
+    0.5 * (inner(wF('+'),n('+'))*inner(uF('+'),n('+')) + 
+     inner(wF('-'),n('-'))*inner(uF('-'),n('-')))*dS(metadata={'quadrature_degree':4})
+    +inner(wF,n)*inner(uF,n) * ds
+    + inner(wI,uF)*dx
+    + inner(wF,phi_flux)*dx
     )
 LFs = (
-    2.0*(inner(wF('+'),n('+'))*un('+')*rho('+') 
-         + inner(wF('-'),n('-'))*un('-')*rho('-'))*dS
+    (inner(wF('+'),n('+'))*un('+')*rho('+') 
+         + inner(wF('-'),n('-'))*un('-')*rho('-'))*dS(metadata={'quadrature_degree':4})
+    + inner(wF,n)* un * rho * ds
+    + inner(wF,n)* (1-un) * rho_in * ds
     + inner(wI,u)*rho*dx
     )
-
 Fs = Function(W)
-
 Fsproblem = LinearVariationalProblem(aFs, LFs, Fs)
-Fssolver = LinearVariationalSolver(Fsproblem)
+Fssolver = LinearVariationalSolver(Fsproblem,solver_parameters=params_flux)
 Fssolver.solve()
-Fsf,Fsi = split(Fs)
-Fnew = Fsf + Fsi
-Fn  = 0.5*(dot((Fnew), n) + abs(dot((Fnew), n)))
+Fsf,phi_flux= split(Fs)
+Fn  = 0.5*(dot((Fsf), n) + abs(dot((Fsf), n)))
 
 
 
@@ -342,14 +344,14 @@ alpha2_expr = Max(0, Min(1, ((1 + c_minus - c_plus)* qmax - q2_hat_bar * (1 - c_
 
 
 #variational problem for q
-L1_q = dtc*(q*dot(grad(phi),Fnew)*dx
-          - conditional(dot(Fnew, n) < 0, phi*dot(Fnew, n)*q_in, 0.0)*ds
-          - conditional(dot(Fnew, n) > 0, phi*dot(Fnew, n)*q, 0.0)*ds
+L1_q = dtc*(q*dot(grad(phi),Fsf)*dx
+          - conditional(dot(Fsf, n) < 0, phi*dot(Fsf, n)*q_in, 0.0)*ds
+          - conditional(dot(Fsf, n) > 0, phi*dot(Fsf, n)*q, 0.0)*ds
           - (phi('+') - phi('-'))*(Fn('+')*q('+') - Fn('-')*q('-'))*dS)
 
 
-L2_q = replace(L1_q, {q: q1, Fnew: Fnew1, Fn: Fn1})
-L3_q = replace(L1_q, {q: q2, Fnew: Fnew2, Fn: Fn2})
+L2_q = replace(L1_q, {q: q1, Fsf: Fsf1, Fn: Fn1})
+L3_q = replace(L1_q, {q: q2, Fsf: Fsf2, Fn: Fn2})
 dq = Function(V)
 
 
