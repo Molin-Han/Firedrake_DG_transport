@@ -5,7 +5,7 @@ from matplotlib.animation import FuncAnimation
 
 #mesh
 #for Flux to be solved correctly
-mesh = PeriodicSquareMesh(40,40)
+mesh = PeriodicUnitSquareMesh(40,40)
 #mesh = UnitSquareMesh(40, 40)
 
 #space
@@ -419,7 +419,10 @@ while t < T - 0.5*dt:
 
 
     #first stage
-    
+    #For Flux_1, it should be solved before rho is solved depending on the way it's defined.
+    Fssolver1.solve()
+
+
     #For rho_1
     solv1_rho.solve()
     rho1.assign(rho + drho)
@@ -442,11 +445,7 @@ while t < T - 0.5*dt:
     #apply the limiting scheme
     rho1.project(rho1_hat_bar + beta1 * (rho1 - rho1_hat_bar))
 
-    #For Flux_1
-    Fssolver1.solve()
-    Fsf1,Fsi1 = split(Fs1)
-    Fnew1 = Fsf1 + Fsi1
-    Fn1  = 0.5*(dot((Fnew1), n) + abs(dot((Fnew1), n)))
+
 
     #For q_1
     solv1_q.solve()
@@ -474,6 +473,9 @@ while t < T - 0.5*dt:
 
 
     #second stage
+    #For Flux_2
+    Fssolver2.solve()
+
     #For rho_2
     solv2_rho.solve()
     rho1.assign(rho1+drho)
@@ -503,11 +505,6 @@ while t < T - 0.5*dt:
     #apply the limiting scheme
     rho2.project(rho2_hat_bar + beta2 * (rho2 - rho2_hat_bar))
 
-    #For Flux_2
-    Fssolver2.solve()
-    Fsf2,Fsi2 = split(Fs2)
-    Fnew2 = Fsf2 + Fsi2
-    Fn2  = 0.5*(dot((Fnew2), n) + abs(dot((Fnew2), n)))
 
 
 
@@ -555,6 +552,8 @@ while t < T - 0.5*dt:
 
 
     #third stage
+    #For Flux
+    Fssolver.solve()
     #For rho
     solv3_rho.solve()
     rho2.assign(rho2+drho)
@@ -590,11 +589,7 @@ while t < T - 0.5*dt:
 
 
 
-    #For Flux
-    Fssolver.solve()
-    Fsf,Fsi = split(Fs)
-    Fnew = Fsf + Fsi
-    Fn  = 0.5*(dot((Fnew), n) + abs(dot((Fnew), n)))
+
 
 
 
