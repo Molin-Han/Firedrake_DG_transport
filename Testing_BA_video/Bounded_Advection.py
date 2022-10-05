@@ -331,7 +331,7 @@ q_minus.assign((1/c_minus) * q_minus_num)
 
 #maximum bound for q
 qmax = Constant(2.0)
-
+qmin = Constant(1.0)
 
 #set alpha
 alpha_expr = Min(1, ((1 + c_minus - c_plus)* qmax - q_hat_bar * (1 - c_plus) - c_minus * q_minus) / (c_plus * (q_hat_bar - q_plus)))
@@ -339,6 +339,13 @@ alpha_expr = Min(1, ((1 + c_minus - c_plus)* qmax - q_hat_bar * (1 - c_plus) - c
 alpha1_expr = Min(1, ((1 + c_minus - c_plus)* qmax - q1_hat_bar * (1 - c_plus) - c_minus * q1_minus) / (c_plus * (q1_hat_bar - q1_plus)))
 
 alpha2_expr = Min(1, ((1 + c_minus - c_plus)* qmax - q2_hat_bar * (1 - c_plus) - c_minus * q2_minus) / (c_plus * (q2_hat_bar - q2_plus)))
+
+alpha_min_expr = Constant(1.0)
+alpha1_min_expr = Constant(1.0)
+alpha2_min_expr = Constant(1.0)
+#alpha_min_expr = Min(1, (q_hat_bar * (1 - c_plus) + c_minus * q_minus - (1 + c_minus + c_plus)* qmin) / (c_plus * (q_plus - q_hat_bar)))
+#alpha1_min_expr = Min(1, (q1_hat_bar * (1 - c_plus) + c_minus * q1_minus - (1 + c_minus + c_plus)* qmin) / (c_plus * (q1_plus - q1_hat_bar)))
+#alpha2_min_expr = Min(1, (q2_hat_bar * (1 - c_plus) + c_minus * q2_minus - (1 + c_minus + c_plus)* qmin) / (c_plus * (q2_plus - q2_hat_bar)))
 
 
 #variational problem for q
@@ -405,7 +412,7 @@ print("rho_min=", rho.dat.data.min())
 q_bar.project(q)
 limiter_q.apply(q)
 q_hat_bar.project(q)
-alpha.assign(alpha_expr)
+alpha.assign(Min(alpha_expr,alpha_min_expr))
 q.project(q_hat_bar + alpha * (q - q_hat_bar))
 print("q_max=", q.dat.data.max())
 print("q_min=", q.dat.data.min())
@@ -472,7 +479,7 @@ while t < T - 0.5*dt:
     q1_bar.project(q1)
     limiter_q.apply(q1)
     q1_hat_bar.project(q1)
-    alpha1.assign(alpha1_expr)
+    alpha1.assign(Min(alpha1_expr,alpha1_min_expr))
     q1.project(q1_hat_bar + alpha1 * (q1 - q1_hat_bar))
 
 
@@ -555,7 +562,7 @@ while t < T - 0.5*dt:
     #limiter apply to q1 another time.
     limiter_q.apply(q1)
     q1_hat_bar.project(q1)
-    alpha1.assign(alpha1_expr)
+    alpha1.assign(Min(alpha1_expr,alpha1_min_expr))
     q1.project(q1_hat_bar + alpha1 * (q1 - q1_hat_bar))
 
     #Calculate for the second stage q value.
@@ -564,7 +571,7 @@ while t < T - 0.5*dt:
     #Apply limiting scheme
     limiter_q.apply(q2)
     q2_hat_bar.project(q2)
-    alpha2.assign(alpha2_expr)
+    alpha2.assign(Min(alpha2_expr,alpha2_min_expr))
     q2.project(q2_hat_bar + alpha2 * (q2 - q2_hat_bar))
 
 
@@ -648,7 +655,7 @@ while t < T - 0.5*dt:
     #limiter apply to q2 another time.
     limiter_q.apply(q2)
     q2_hat_bar.project(q2)
-    alpha2.assign(alpha2_expr)
+    alpha2.assign(Min(alpha2_expr,alpha2_min_expr))
     q2.project(q2_hat_bar + alpha2 * (q2 - q2_hat_bar))
 
 
@@ -658,7 +665,7 @@ while t < T - 0.5*dt:
     #Apply limiting scheme
     limiter_q.apply(q)
     q_hat_bar.project(q)
-    alpha.assign(alpha_expr)
+    alpha.assign(Min(alpha_expr,alpha_min_expr))
     q.project(q_hat_bar + alpha * (q - q_hat_bar))
 
     print("q_max=", q.dat.data.max())
