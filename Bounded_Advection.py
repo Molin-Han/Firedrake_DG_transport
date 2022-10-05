@@ -336,11 +336,11 @@ qmax = Constant(2.0)
 
 
 #set alpha
-alpha_expr = Max(0, Min(1, ((1 + c_minus - c_plus)* qmax - q_hat_bar * (1 - c_plus) - c_minus * q_minus) / (c_plus * (q_hat_bar - q_plus))))
+alpha_expr = Min(1, ((1 + c_minus - c_plus)* qmax - q_hat_bar * (1 - c_plus) - c_minus * q_minus) / (c_plus * (q_hat_bar - q_plus)))
 
-alpha1_expr = Max(0, Min(1, ((1 + c_minus - c_plus)* qmax - q1_hat_bar * (1 - c_plus) - c_minus * q1_minus) / (c_plus * (q1_hat_bar - q1_plus))))
+alpha1_expr = Min(1, ((1 + c_minus - c_plus)* qmax - q1_hat_bar * (1 - c_plus) - c_minus * q1_minus) / (c_plus * (q1_hat_bar - q1_plus)))
 
-alpha2_expr = Max(0, Min(1, ((1 + c_minus - c_plus)* qmax - q2_hat_bar * (1 - c_plus) - c_minus * q2_minus) / (c_plus * (q2_hat_bar - q2_plus))))
+alpha2_expr = Min(1, ((1 + c_minus - c_plus)* qmax - q2_hat_bar * (1 - c_plus) - c_minus * q2_minus) / (c_plus * (q2_hat_bar - q2_plus)))
 
 
 #variational problem for q
@@ -451,6 +451,17 @@ while t < T - 0.5*dt:
     solv1_q.solve()
     q1.assign(q + dq)
 
+
+    #Courant number should be recalculated
+    #c+
+    assemble(One*v*dx, tensor=Courant_denom_plus)
+    assemble(Courant_num_form_plus, tensor=Courant_num_plus)
+    Courant_plus.assign(Courant_num_plus/Courant_denom_plus)
+    #c-
+    assemble(One*v*dx, tensor=Courant_denom_minus )
+    assemble(Courant_num_form_minus , tensor=Courant_num_minus )
+    Courant_minus.assign(Courant_num_minus /Courant_denom_minus )
+
     #q+ recalculated
     assemble(q1_plus_form, tensor=q1_plus_num)
     q1_plus.assign((1/c_plus) * q1_plus_num)
@@ -513,6 +524,18 @@ while t < T - 0.5*dt:
 
     solv2_q.solve()
     q1.assign(q1+dq)
+
+
+    #Courant number should be recalculated
+    #c+
+    assemble(One*v*dx, tensor=Courant_denom_plus)
+    assemble(Courant_num_form_plus, tensor=Courant_num_plus)
+    Courant_plus.assign(Courant_num_plus/Courant_denom_plus)
+    #c-
+    assemble(One*v*dx, tensor=Courant_denom_minus )
+    assemble(Courant_num_form_minus , tensor=Courant_num_minus )
+    Courant_minus.assign(Courant_num_minus /Courant_denom_minus )
+
 
     #q1+ recalculated
     assemble(q1_plus_form, tensor=q1_plus_num)
@@ -597,7 +620,18 @@ while t < T - 0.5*dt:
     #For q
     solv3_q.solve()
     q2.assign(q2+dq)
+
     
+    #Courant number should be recalculated
+    #c+
+    assemble(One*v*dx, tensor=Courant_denom_plus)
+    assemble(Courant_num_form_plus, tensor=Courant_num_plus)
+    Courant_plus.assign(Courant_num_plus/Courant_denom_plus)
+    #c-
+    assemble(One*v*dx, tensor=Courant_denom_minus )
+    assemble(Courant_num_form_minus , tensor=Courant_num_minus )
+    Courant_minus.assign(Courant_num_minus /Courant_denom_minus )
+
     #q2+ recalculated
     assemble(q2_plus_form, tensor=q2_plus_num)
     q2_plus.assign((1/c_plus) * q2_plus_num)
