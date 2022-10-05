@@ -569,9 +569,6 @@ while t < T - 0.5*dt:
 
 
 
-
-
-
     #third stage
     #For Flux
     Fssolver.solve()
