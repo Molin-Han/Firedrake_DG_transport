@@ -372,8 +372,8 @@ solv2_q = LinearVariationalSolver(prob2_q, solver_parameters=params)
 prob3_q = LinearVariationalProblem(b, L3_q, dq)
 solv3_q = LinearVariationalSolver(prob3_q, solver_parameters=params)
 
-
-
+rho_data = File('BA_rho.pvd')
+q_data = File('BA_q.pvd')
 
 #Set Kuzmin limiter
 limiter_rho = VertexBasedLimiter(V)
@@ -667,7 +667,8 @@ while t < T - 0.5*dt:
     print("q_max=", q.dat.data.max())
     print("q_min=", q.dat.data.min())
 
-
+    rho_data.write(rho)
+    q_data.write(q)
 
     #update the step and proceed to the next time step.
     step += 1
