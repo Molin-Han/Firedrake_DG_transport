@@ -47,8 +47,8 @@ qs = []
 
 #Initial setting for time
 #time period
-T = 2*math.pi
-dt = T/1200
+T = 2*math.pi/40
+dt = 2* math.pi /1200
 dtc = Constant(dt)
 rho_in = Constant(1.0)
 
@@ -234,8 +234,6 @@ Fluxes = FunctionSpace(mesh,"RT",2)
 Inners = VectorFunctionSpace(mesh,"DG",0)
 W = MixedFunctionSpace((Fluxes,Inners))
 
-wI = TestFunction(Inners)
-assemble(inner(wI,u)*dx)
 
 wF,wI = TestFunctions(W)
 uF,phi_flux = TrialFunctions(W)
@@ -383,7 +381,7 @@ limiter_q = VertexBasedLimiter(V)
 
 t = 0.0
 step = 0
-output_freq = 20
+output_freq = 2
 
 
 if step % output_freq == 0:
@@ -621,7 +619,7 @@ while t < T - 0.5*dt:
     solv3_q.solve()
     q2.assign(q2+dq)
 
-    
+
     #Courant number should be recalculated
     #c+
     assemble(One*v*dx, tensor=Courant_denom_plus)
