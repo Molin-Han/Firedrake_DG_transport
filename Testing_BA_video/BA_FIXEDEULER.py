@@ -489,6 +489,7 @@ while t < T - 0.5*dt:
 
     print("rho_max=", rho.dat.data.max())
     print("rho_min=", rho.dat.data.min())
+    
     print("q_max=", q.dat.data.max())
     print("q_min=", q.dat.data.min())
 
