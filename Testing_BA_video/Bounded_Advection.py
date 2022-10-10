@@ -47,7 +47,7 @@ qs = []
 
 #Initial setting for time
 #time period
-T = 2*math.pi/40
+T = 2*math.pi/200
 dt = 2* math.pi /1200
 dtc = Constant(dt)
 rho_in = Constant(1.0)
@@ -334,11 +334,16 @@ qmax = Constant(2.0)
 qmin = Constant(1.0)
 
 #set alpha
-alpha_expr = Min(1, ((1 + c_minus - c_plus)* qmax - q_hat_bar * (1 - c_plus) - c_minus * q_minus) / (c_plus * (q_hat_bar - q_plus)))
+#alpha_expr = Min(1, ((1 + c_minus - c_plus)* qmax - q_hat_bar * (1 - c_plus) - c_minus * q_minus) / (c_plus * (q_hat_bar - q_plus)))
 
-alpha1_expr = Min(1, ((1 + c_minus - c_plus)* qmax - q1_hat_bar * (1 - c_plus) - c_minus * q1_minus) / (c_plus * (q1_hat_bar - q1_plus)))
+#alpha1_expr = Min(1, ((1 + c_minus - c_plus)* qmax - q1_hat_bar * (1 - c_plus) - c_minus * q1_minus) / (c_plus * (q1_hat_bar - q1_plus)))
 
-alpha2_expr = Min(1, ((1 + c_minus - c_plus)* qmax - q2_hat_bar * (1 - c_plus) - c_minus * q2_minus) / (c_plus * (q2_hat_bar - q2_plus)))
+#alpha2_expr = Min(1, ((1 + c_minus - c_plus)* qmax - q2_hat_bar * (1 - c_plus) - c_minus * q2_minus) / (c_plus * (q2_hat_bar - q2_plus)))
+
+alpha_expr = 0
+
+alpha1_expr = 0
+alpha2_expr = 0
 
 alpha_min_expr = Constant(1.0)
 alpha1_min_expr = Constant(1.0)
@@ -418,6 +423,7 @@ print("q_max=", q.dat.data.max())
 print("q_min=", q.dat.data.min())
 
 #Main body
+Rho_1_bar_proj = Projector(rho1_bar, rho1, use_slate_for_inverse=True)
 
 while t < T - 0.5*dt:
     #solve the density and the bounded advection
@@ -443,7 +449,7 @@ while t < T - 0.5*dt:
     Courant_minus.assign(Courant_num_minus /Courant_denom_minus )
 
     #rho limiting scheme, beta1 found.
-    rho1_bar.project(rho1)
+    Rho_1_bar_proj.project()
     limiter_rho.apply(rho1)
     rho1_hat_bar.project(rho1)
     beta1.assign(beta1_expr)
@@ -455,6 +461,7 @@ while t < T - 0.5*dt:
     #For q_1
     solv1_q.solve()
     q1.assign(q + dq)
+    print("q1max=",q1.dat.data.max())
 
 
     #Courant number should be recalculated
@@ -671,17 +678,17 @@ while t < T - 0.5*dt:
     print("q_max=", q.dat.data.max())
     print("q_min=", q.dat.data.min())
 
-    rho_data.write(rho)
-    q_data.write(q)
+    #rho_data.write(rho)
+    #q_data.write(q)
 
     #update the step and proceed to the next time step.
     step += 1
     t += dt
 
-    if step % output_freq == 0:
-        rhos.append(rho.copy(deepcopy=True))
-        qs.append(q.copy(deepcopy=True))
-        print("t=", t)
+    #if step % output_freq == 0:
+        #rhos.append(rho.copy(deepcopy=True))
+        #qs.append(q.copy(deepcopy=True))
+        #print("t=", t)
 
 
 

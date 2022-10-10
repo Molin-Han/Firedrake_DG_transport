@@ -54,13 +54,13 @@ rho_in = Constant(1.0)
 
 q_in = Constant(1.0)
 
-
+rho_new = Function(V)
 #trial functions and test functions
 drho_trial = TrialFunction(V)
 dq_trial = TrialFunction(V)
 phi = TestFunction(V)
 a = phi*drho_trial*dx
-b = phi*dq_trial*dx
+b = phi*rho_new*dq_trial*dx
 
 
 #elements
@@ -334,11 +334,17 @@ qmax = Constant(2.0)
 qmin = Constant(1.0)
 
 #set alpha
-alpha_expr = Min(1, ((1 + c_minus - c_plus)* qmax - q_hat_bar * (1 - c_plus) - c_minus * q_minus) / (c_plus * (q_hat_bar - q_plus)))
+#alpha_expr = Min(1, ((1 + c_minus - c_plus)* qmax - q_hat_bar * (1 - c_plus) - c_minus * q_minus) / (c_plus * (q_hat_bar - q_plus)))
 
-alpha1_expr = Min(1, ((1 + c_minus - c_plus)* qmax - q1_hat_bar * (1 - c_plus) - c_minus * q1_minus) / (c_plus * (q1_hat_bar - q1_plus)))
+#alpha1_expr = Min(1, ((1 + c_minus - c_plus)* qmax - q1_hat_bar * (1 - c_plus) - c_minus * q1_minus) / (c_plus * (q1_hat_bar - q1_plus)))
 
-alpha2_expr = Min(1, ((1 + c_minus - c_plus)* qmax - q2_hat_bar * (1 - c_plus) - c_minus * q2_minus) / (c_plus * (q2_hat_bar - q2_plus)))
+#alpha2_expr = Min(1, ((1 + c_minus - c_plus)* qmax - q2_hat_bar * (1 - c_plus) - c_minus * q2_minus) / (c_plus * (q2_hat_bar - q2_plus)))
+
+
+alpha_expr = 0
+alpha1_expr = 0
+alpha2_expr = 0
+
 
 alpha_min_expr = Constant(1.0)
 alpha1_min_expr = Constant(1.0)
@@ -353,11 +359,12 @@ L1_q = dtc*(q*dot(grad(phi),Fsf)*dx
           - conditional(dot(Fsf, n) < 0, phi*dot(Fsf, n)*q_in, 0.0)*ds
           - conditional(dot(Fsf, n) > 0, phi*dot(Fsf, n)*q, 0.0)*ds
           - (phi('+') - phi('-'))*(Fn('+')*q('+') - Fn('-')*q('-'))*dS)
+L1_q += phi * rho * q * dx
 
 
 L2_q = replace(L1_q, {q: q1, Fsf: Fsf1, Fn: Fn1})
 L3_q = replace(L1_q, {q: q2, Fsf: Fsf2, Fn: Fn2})
-dq = Function(V)
+qnew = Function(V)
 
 
 
@@ -372,11 +379,11 @@ prob3_rho = LinearVariationalProblem(a, L3_rho, drho)
 solv3_rho = LinearVariationalSolver(prob3_rho, solver_parameters=params)
 
 
-prob1_q = LinearVariationalProblem(b, L1_q, dq)
+prob1_q = LinearVariationalProblem(b, L1_q, qnew)
 solv1_q = LinearVariationalSolver(prob1_q, solver_parameters=params)
-prob2_q = LinearVariationalProblem(b, L2_q, dq)
+prob2_q = LinearVariationalProblem(b, L2_q, qnew)
 solv2_q = LinearVariationalSolver(prob2_q, solver_parameters=params)
-prob3_q = LinearVariationalProblem(b, L3_q, dq)
+prob3_q = LinearVariationalProblem(b, L3_q, qnew)
 solv3_q = LinearVariationalSolver(prob3_q, solver_parameters=params)
 
 rho_data = File('BA_Euler_rho.pvd')
@@ -427,21 +434,6 @@ while t < T - 0.5*dt:
     #For Flux_1, it should be solved before rho is solved depending on the way it's defined.
     Fssolver1.solve()
 
-
-    #For rho_1
-    solv1_rho.solve()
-    rho.assign(rho + drho)
-
-    #Courant number should be recalculated
-    #c+
-    assemble(One*v*dx, tensor=Courant_denom_plus)
-    assemble(Courant_num_form_plus, tensor=Courant_num_plus)
-    Courant_plus.assign(Courant_num_plus/Courant_denom_plus)
-    #c-
-    assemble(One*v*dx, tensor=Courant_denom_minus )
-    assemble(Courant_num_form_minus , tensor=Courant_num_minus )
-    Courant_minus.assign(Courant_num_minus /Courant_denom_minus )
-
     #rho limiting scheme, beta1 found.
     rho_bar.project(rho)
     limiter_rho.apply(rho)
@@ -450,11 +442,18 @@ while t < T - 0.5*dt:
     #apply the limiting scheme
     rho.project(rho_hat_bar + beta * (rho - rho_hat_bar))
 
+    #For rho_1
+    solv1_rho.solve()
+    rho_new.assign(rho + drho)
+
+
+
+
 
 
     #For q_1
     solv1_q.solve()
-    q.assign(q + dq)
+    q.assign(qnew)
 
 
     #Courant number should be recalculated
@@ -483,7 +482,7 @@ while t < T - 0.5*dt:
     q.project(q_hat_bar + alpha * (q - q_hat_bar))
 
 
-
+    rho.assign(rho_new)
 
 
 
