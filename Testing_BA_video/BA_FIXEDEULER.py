@@ -446,33 +446,10 @@ while t < T - 0.5*dt:
     solv1_rho.solve()
     rho_new.assign(rho + drho)
 
-
-
-
-
-
     #For q_1
     solv1_q.solve()
     q.assign(qnew)
 
-
-    #Courant number should be recalculated
-    #c+
-    assemble(One*v*dx, tensor=Courant_denom_plus)
-    assemble(Courant_num_form_plus, tensor=Courant_num_plus)
-    Courant_plus.assign(Courant_num_plus/Courant_denom_plus)
-    #c-
-    assemble(One*v*dx, tensor=Courant_denom_minus )
-    assemble(Courant_num_form_minus , tensor=Courant_num_minus )
-    Courant_minus.assign(Courant_num_minus /Courant_denom_minus )
-
-    #q+ recalculated
-    assemble(q_plus_form, tensor=q_plus_num)
-    q_plus.assign((1/c_plus) * q_plus_num)
-
-    #q- recalculated
-    assemble(q_minus_form, tensor=q_minus_num)
-    q_minus.assign((1/c_minus) * q_minus_num)
 
     #q limiting scheme
     q_bar.project(q)
