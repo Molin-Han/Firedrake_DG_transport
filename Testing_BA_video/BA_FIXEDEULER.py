@@ -334,24 +334,24 @@ qmax = Constant(2.0)
 qmin = Constant(1.0)
 
 #set alpha
-#alpha_expr = Min(1, ((1 + c_minus - c_plus)* qmax - q_hat_bar * (1 - c_plus) - c_minus * q_minus) / (c_plus * (q_hat_bar - q_plus)))
+alpha_expr = Min(1, ((1 + c_minus - c_plus)* qmax - q_hat_bar * (1 - c_plus) - c_minus * q_minus) / (c_plus * (q_hat_bar - q_plus)))
 
-#alpha1_expr = Min(1, ((1 + c_minus - c_plus)* qmax - q1_hat_bar * (1 - c_plus) - c_minus * q1_minus) / (c_plus * (q1_hat_bar - q1_plus)))
+alpha1_expr = Min(1, ((1 + c_minus - c_plus)* qmax - q1_hat_bar * (1 - c_plus) - c_minus * q1_minus) / (c_plus * (q1_hat_bar - q1_plus)))
 
-#alpha2_expr = Min(1, ((1 + c_minus - c_plus)* qmax - q2_hat_bar * (1 - c_plus) - c_minus * q2_minus) / (c_plus * (q2_hat_bar - q2_plus)))
-
-
-alpha_expr = 0
-alpha1_expr = 0
-alpha2_expr = 0
+alpha2_expr = Min(1, ((1 + c_minus - c_plus)* qmax - q2_hat_bar * (1 - c_plus) - c_minus * q2_minus) / (c_plus * (q2_hat_bar - q2_plus)))
 
 
-alpha_min_expr = Constant(1.0)
-alpha1_min_expr = Constant(1.0)
-alpha2_min_expr = Constant(1.0)
-#alpha_min_expr = Min(1, (q_hat_bar * (1 - c_plus) + c_minus * q_minus - (1 + c_minus + c_plus)* qmin) / (c_plus * (q_plus - q_hat_bar)))
-#alpha1_min_expr = Min(1, (q1_hat_bar * (1 - c_plus) + c_minus * q1_minus - (1 + c_minus + c_plus)* qmin) / (c_plus * (q1_plus - q1_hat_bar)))
-#alpha2_min_expr = Min(1, (q2_hat_bar * (1 - c_plus) + c_minus * q2_minus - (1 + c_minus + c_plus)* qmin) / (c_plus * (q2_plus - q2_hat_bar)))
+#alpha_expr = 0
+#alpha1_expr = 0
+#alpha2_expr = 0
+
+
+#alpha_min_expr = Constant(1.0)
+#alpha1_min_expr = Constant(1.0)
+#alpha2_min_expr = Constant(1.0)
+alpha_min_expr = Min(1, (q_hat_bar * (1 - c_plus) + c_minus * q_minus - (1 + c_minus + c_plus)* qmin) / (c_plus * (q_plus - q_hat_bar)))
+alpha1_min_expr = Min(1, (q1_hat_bar * (1 - c_plus) + c_minus * q1_minus - (1 + c_minus + c_plus)* qmin) / (c_plus * (q1_plus - q1_hat_bar)))
+alpha2_min_expr = Min(1, (q2_hat_bar * (1 - c_plus) + c_minus * q2_minus - (1 + c_minus + c_plus)* qmin) / (c_plus * (q2_plus - q2_hat_bar)))
 
 
 #variational problem for q
@@ -434,6 +434,10 @@ while t < T - 0.5*dt:
     #For Flux_1, it should be solved before rho is solved depending on the way it's defined.
     Fssolver1.solve()
 
+
+    #solv1_rho.solve()
+    #rho_new.assign(rho + drho)
+    #rho.assign(rho_new)
     #rho limiting scheme, beta1 found.
     rho_bar.project(rho)
     limiter_rho.apply(rho)
@@ -459,7 +463,8 @@ while t < T - 0.5*dt:
     q.project(q_hat_bar + alpha * (q - q_hat_bar))
 
 
-    rho.assign(rho_new)
+    #rho.assign(rho_new)
+    rho.assign(rho + drho)
 
 
 
