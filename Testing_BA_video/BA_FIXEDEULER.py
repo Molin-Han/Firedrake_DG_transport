@@ -5,21 +5,27 @@ from matplotlib.animation import FuncAnimation
 
 #mesh
 #for Flux to be solved correctly
-mesh = PeriodicUnitSquareMesh(40,40)
-#mesh = UnitSquareMesh(40, 40)
+#mesh = PeriodicUnitSquareMesh(40,40)
+mesh = UnitSquareMesh(40, 40)
 
 #space
 #degree of space
 deg = 1
 V = FunctionSpace(mesh, "DG", deg)
-W = VectorFunctionSpace(mesh, "CG", 1)
+#W = VectorFunctionSpace(mesh, "CG", 1)
+W = VectorFunctionSpace(mesh, "DG", 1)
 
 x, y = SpatialCoordinate(mesh)
 #Initial setting for the problem
 #velocity field
 #velocity = as_vector(( (-0.05*x - y + 0.475 ) , ( x - 0.05*y-0.525)))
-velocity = as_vector(( (0.5 - y ) , ( x - 0.5)))
-u = Function(W).interpolate(velocity)
+#velocity = as_vector(( (0.5 - y ) , ( x - 0.5)))
+velocity = as_vector((-sin(pi * x)* cos(pi * y), cos(pi*x)* sin(pi *y)))
+#u = Function(W).interpolate(velocity)
+
+stream = FunctionSpace(mesh,"CG", 2)
+stream_func = Function(stream).interpolate(1/ pi * sin(pi*x)*sin(pi*y))
+u = Function(W).interpolate(as_vector((-stream_func.dx(1),stream_func.dx(0))))
 
 #initial condition for the atomsphere
 bell_r0 = 0.15; bell_x0 = 0.25; bell_y0 = 0.5
@@ -48,7 +54,7 @@ qs = []
 #Initial setting for time
 #time period
 T = 2*math.pi/40
-dt = 2* math.pi /1200
+dt = 2* math.pi /120000
 dtc = Constant(dt)
 rho_in = Constant(1.0)
 
@@ -91,6 +97,7 @@ Courant_plus = Function(DG1)
 assemble(One*v*dx, tensor=Courant_denom_plus)
 assemble(Courant_num_form_plus, tensor=Courant_num_plus)
 Courant_plus.assign(Courant_num_plus/Courant_denom_plus)
+print(norm(Courant_plus))
 
 
 #c-
@@ -412,7 +419,7 @@ rho_hat_bar.project(rho)
 #Here rho is the value after applying the Kuzmin limiter i.e. rho_hat
 beta.assign(beta_expr)
 #apply the limiting scheme to density
-rho.project(rho_hat_bar + beta * (rho - rho_hat_bar))
+#rho.project(rho_hat_bar + beta * (rho - rho_hat_bar))
 print("rho_max=", rho.dat.data.max())
 print("rho_min=", rho.dat.data.min())
 
@@ -444,7 +451,7 @@ while t < T - 0.5*dt:
     rho_hat_bar.project(rho)
     beta.assign(beta_expr)
     #apply the limiting scheme
-    rho.project(rho_hat_bar + beta * (rho - rho_hat_bar))
+    #rho.project(rho_hat_bar + beta * (rho - rho_hat_bar))
 
     #For rho_1
     solv1_rho.solve()
