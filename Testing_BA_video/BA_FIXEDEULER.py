@@ -19,13 +19,13 @@ x, y = SpatialCoordinate(mesh)
 #Initial setting for the problem
 #velocity field
 #velocity = as_vector(( (-0.05*x - y + 0.475 ) , ( x - 0.05*y-0.525)))
-#velocity = as_vector(( (0.5 - y ) , ( x - 0.5)))
-velocity = as_vector((-sin(pi * x)* cos(pi * y), cos(pi*x)* sin(pi *y)))
-#u = Function(W).interpolate(velocity)
+velocity = as_vector(( (0.5 - y ) , ( x - 0.5)))
+#velocity = as_vector((-sin(pi * x)* cos(pi * y), cos(pi*x)* sin(pi *y)))
+u = Function(W).interpolate(velocity)
 
-stream = FunctionSpace(mesh,"CG", 2)
-stream_func = Function(stream).interpolate(1/ pi * sin(pi*x)*sin(pi*y))
-u = Function(W).interpolate(as_vector((-stream_func.dx(1),stream_func.dx(0))))
+#stream = FunctionSpace(mesh,"CG", 2)
+#stream_func = Function(stream).interpolate(1/ pi * sin(pi*x)*sin(pi*y))
+#u = Function(W).interpolate(as_vector((-stream_func.dx(1),stream_func.dx(0))))
 
 #initial condition for the atomsphere
 bell_r0 = 0.15; bell_x0 = 0.25; bell_y0 = 0.5
@@ -428,9 +428,10 @@ limiter_q.apply(q)
 q_hat_bar.project(q)
 alpha.assign(Min(alpha_expr,alpha_min_expr))
 q.project(q_hat_bar + alpha * (q - q_hat_bar))
-print("q_max=", q.dat.data.max())
-print("q_min=", q.dat.data.min())
+#print("q_max=", q.dat.data.max())
+#print("q_min=", q.dat.data.min())
 
+i = 0
 #Main body
 
 while t < T - 0.5*dt:
@@ -439,7 +440,7 @@ while t < T - 0.5*dt:
 
     #first stage
     #For Flux_1, it should be solved before rho is solved depending on the way it's defined.
-    Fssolver1.solve()
+    #Fssolver1.solve()
 
 
     #solv1_rho.solve()
@@ -451,7 +452,7 @@ while t < T - 0.5*dt:
     rho_hat_bar.project(rho)
     beta.assign(beta_expr)
     #apply the limiting scheme
-    #rho.project(rho_hat_bar + beta * (rho - rho_hat_bar))
+    rho.project(rho_hat_bar + beta * (rho - rho_hat_bar))
 
     #For rho_1
     solv1_rho.solve()
@@ -475,16 +476,17 @@ while t < T - 0.5*dt:
 
 
 
-    print("rho_max=", rho.dat.data.max())
-    print("rho_min=", rho.dat.data.min())
+    print(f'stage{i}rho_max=', rho.dat.data.max())
+    print(f'stage{i}rho_min=', rho.dat.data.min())
     
-    print("q_max=", q.dat.data.max())
-    print("q_min=", q.dat.data.min())
+    #print("q_max=", q.dat.data.max())
+    #print("q_min=", q.dat.data.min())
 
-    rho_data.write(rho)
-    q_data.write(q)
+    #$rho_data.write(rho)
+    #q_data.write(q)
 
     #update the step and proceed to the next time step.
+    i+=1
     step += 1
     t += dt
 

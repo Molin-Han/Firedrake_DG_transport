@@ -162,54 +162,9 @@ while t < T - 0.5*dt:
 
     #first stage
     solv1_rho.solve()
-    rho1.assign(rho + drho)
+    rho.assign(rho + drho)
 
     #rho limiting scheme, beta1 found.
-    rho1_bar.project(rho1)
-    limiter.apply(rho1)
-    rho1_hat_bar.project(rho1)
-    beta1.assign(Max(0, Min(1, (1 + Courant_minus - Courant_plus)
-    /(Courant_minus * rho1 / rho1_hat_bar - Courant_plus*rho1 / rho1_hat_bar - Courant_minus + Courant_plus))))
-    #apply the limiting scheme
-    rho1.project(rho1_hat_bar + beta1 * (rho1 - rho1_hat_bar))
-
-
-    #second stage
-    solv2_rho.solve()
-    rho1.assign(rho1+drho)
-    #limiter apply to rho1 another time.
-    limiter.apply(rho1)
-    rho1_hat_bar.project(rho1)
-    beta1.assign(Max(0, Min(1, (1 + Courant_minus - Courant_plus)
-    /(Courant_minus * rho1 / rho1_hat_bar - Courant_plus*rho1 / rho1_hat_bar - Courant_minus + Courant_plus))))
-    #apply the limiting scheme
-    rho1.project(rho1_hat_bar + beta1 * (rho1 - rho1_hat_bar))
-    
-    #Calculate for the second stage rho value.
-    rho2.assign(0.75*rho + 0.25*(rho1))
-    rho2_bar.project(rho2)
-    limiter.apply(rho2)
-    rho2_hat_bar.project(rho2)
-    beta2.assign(Max(0, Min(1, (1 + Courant_minus - Courant_plus)
-    /(Courant_minus * rho2 / rho2_hat_bar - Courant_plus*rho2 / rho2_hat_bar - Courant_minus + Courant_plus))))
-    #apply the limiting scheme
-    rho2.project(rho2_hat_bar + beta2 * (rho2 - rho2_hat_bar))
-
-
-    #third stage
-    solv3_rho.solve()
-    rho2.assign(rho2+drho)
-
-    #limiter apply to rho2 another time.
-    limiter.apply(rho2)
-    rho2_hat_bar.project(rho2)
-    beta2.assign(Max(0, Min(1, (1 + Courant_minus - Courant_plus)
-    /(Courant_minus * rho2 / rho2_hat_bar - Courant_plus*rho2 / rho2_hat_bar - Courant_minus + Courant_plus))))
-    #apply the limiting scheme
-    rho2.project(rho2_hat_bar + beta2 * (rho2 - rho2_hat_bar))
-
-    #Calculate for the rho value.
-    rho.assign((1.0/3.0)*rho + (2.0/3.0)*(rho2))
     rho_bar.project(rho)
     limiter.apply(rho)
     rho_hat_bar.project(rho)
@@ -217,6 +172,9 @@ while t < T - 0.5*dt:
     /(Courant_minus * rho / rho_hat_bar - Courant_plus*rho / rho_hat_bar - Courant_minus + Courant_plus))))
     #apply the limiting scheme
     rho.project(rho_hat_bar + beta * (rho - rho_hat_bar))
+
+
+    
 
     print(f'stage{i}',rho.dat.data.max())
     print(f'stage{i}',rho.dat.data.min())
