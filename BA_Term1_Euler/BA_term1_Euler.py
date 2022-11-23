@@ -74,7 +74,7 @@ q_data = File('BA_Euler_q.pvd')
 #Initial setting for time
 #time period
 T = 2*math.pi/40
-dt = 2* math.pi /120000
+dt = 2* math.pi /1200
 dtc = Constant(dt)
 rho_in = Constant(1.0)
 q_in = Constant(1.0)
@@ -334,8 +334,8 @@ while t < T - 0.5*dt:
     print(f'stage{i},q_max=', q.dat.data.max())
     print(f'stage{i},q_min=', q.dat.data.min())
 
-    #$rho_data.write(rho)
-    #q_data.write(q)
+    rho_data.write(rho)
+    q_data.write(q)
 
     #update the step and proceed to the next time step.
     i+=1
