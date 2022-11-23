@@ -286,11 +286,12 @@ print(f"stage{i},q_min=", q.dat.data.min())
 
 
 # Main Body
+# solve the density and the bounded advection
 while t < T - 0.5*dt:
-    #solve the density and the bounded advection
+
     #first stage
-    #For Flux_1, it should be solved before rho is solved depending on the way it's defined.
-    #Fssolver1.solve()
+    #For Flux, it should be solved before rho is solved depending on the way it's defined.
+    Fssolver.solve()
     #solv1_rho.solve()
     #rho_new.assign(rho + drho)
     #rho.assign(rho_new)
@@ -321,7 +322,7 @@ while t < T - 0.5*dt:
     #rho.assign(rho_new)
     rho.assign(rho + drho)
 
-    print(f'stage{i,}rho_max=', rho.dat.data.max())
+    print(f'stage{i},rho_max=', rho.dat.data.max())
     print(f'stage{i},rho_min=', rho.dat.data.min())
     #print(f'stage{i},q_max=', q.dat.data.max())
     #print(f'stage{i},q_min=', q.dat.data.min())
@@ -338,3 +339,14 @@ while t < T - 0.5*dt:
         rhos.append(rho.copy(deepcopy=True))
         qs.append(q.copy(deepcopy=True))
         print("t=", t)
+
+
+
+
+L2_err_rho = sqrt(assemble((rho - rho_init)*(rho - rho_init)*dx))
+L2_init_rho = sqrt(assemble(rho_init*rho_init*dx))
+print("error_rho =", L2_err_rho/L2_init_rho)
+
+L2_err_q = sqrt(assemble((q - q_init)*(q - q_init)*dx))
+L2_init_q = sqrt(assemble(q_init*q_init*dx))
+print("error_q =", L2_err_q/L2_init_q)
