@@ -109,7 +109,6 @@ limiter_q = VertexBasedLimiter(V)
 def both(vec):
     return vec('+') + vec('-')
 
-
 DG1 = FunctionSpace(mesh, "DG", deg)
 One = Function(DG1).assign(1.0)
 v = TestFunction(DG1)
@@ -321,6 +320,14 @@ while t < T - 0.5*dt:
 
     #rho.assign(rho_new)
     rho.assign(rho + drho)
+    ### Testing
+    #rho limiting scheme, beta1 found.
+    rho_bar.project(rho)
+    limiter_rho.apply(rho)
+    rho_hat_bar.project(rho)
+    beta.assign(beta_expr)
+    #apply the limiting scheme
+    rho.project(rho_hat_bar + beta * (rho - rho_hat_bar))
 
     print(f'stage{i},rho_max=', rho.dat.data.max())
     print(f'stage{i},rho_min=', rho.dat.data.min())
