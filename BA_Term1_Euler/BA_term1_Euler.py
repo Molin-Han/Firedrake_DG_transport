@@ -334,8 +334,8 @@ while t < T - 0.5*dt:
     print(f'stage{i},q_max=', q.dat.data.max())
     print(f'stage{i},q_min=', q.dat.data.min())
 
-    rho_data.write(rho)
-    q_data.write(q)
+    #rho_data.write(rho)
+    #q_data.write(q)
 
     #update the step and proceed to the next time step.
     i+=1
