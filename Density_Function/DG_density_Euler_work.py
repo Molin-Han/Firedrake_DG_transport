@@ -174,8 +174,6 @@ while t < T - 0.5*dt:
     rho.project(rho_hat_bar + beta * (rho - rho_hat_bar))
 
 
-    
-
     print(f'stage{i}',rho.dat.data.max())
     print(f'stage{i}',rho.dat.data.min())
 

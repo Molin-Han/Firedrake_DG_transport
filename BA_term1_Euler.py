@@ -224,8 +224,8 @@ q_minus.assign((1/c_minus) * q_minus_num)
 qmax = Constant(2.0)
 qmin = Constant(1.0)
 #set alpha
-#alpha_expr = Min(1, ((1 + c_minus - c_plus)* qmax - q_hat_bar * (1 - c_plus) - c_minus * q_minus) / (c_plus * (q_hat_bar - q_plus)))
-alpha_expr = 0
+alpha_expr = Min(1, ((1 + c_minus - c_plus)* qmax - q_hat_bar * (1 - c_plus) - c_minus * q_minus) / (c_plus * (q_hat_bar - q_plus)))
+#alpha_expr = 0
 alpha_min_expr = Constant(1.0)
 #alpha_min_expr = Min(1, (q_hat_bar * (1 - c_plus) + c_minus * q_minus - (1 + c_minus + c_plus)* qmin) / (c_plus * (q_plus - q_hat_bar)))
 
@@ -331,8 +331,8 @@ while t < T - 0.5*dt:
 
     print(f'stage{i},rho_max=', rho.dat.data.max())
     print(f'stage{i},rho_min=', rho.dat.data.min())
-    #print(f'stage{i},q_max=', q.dat.data.max())
-    #print(f'stage{i},q_min=', q.dat.data.min())
+    print(f'stage{i},q_max=', q.dat.data.max())
+    print(f'stage{i},q_min=', q.dat.data.min())
 
     #$rho_data.write(rho)
     #q_data.write(q)
