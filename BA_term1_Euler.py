@@ -134,23 +134,53 @@ Courant_minus.assign(Courant_num_minus /Courant_denom_minus )
 
 # Set for the Flux Limiter for Density Equation
 beta = Function(DG1)
-beta1 = Function(DG1)
-beta2 = Function(DG1)
 
 rho_bar = Function(DG1)
 rho_hat_bar = Function(DG1)
-
-rho1_bar = Function(DG1)
-rho1_hat_bar = Function(DG1)
-
-rho2_bar = Function(DG1)
-rho2_hat_bar = Function(DG1)
 
 #set for the expression for beta
 c_plus = Courant_plus * rho / rho_hat_bar
 c_minus = Courant_minus * rho / rho_hat_bar
 
-
 beta_expr = Max(0, Min(1, (1 + Courant_minus - Courant_plus)/(c_minus - c_plus - Courant_minus + Courant_plus)))
 
 
+# Density Equation Variational Problem
+L_rho = dtc*(rho*dot(grad(phi),u)*dx
+          - conditional(dot(u, n) < 0, phi*dot(u, n)*rho_in, 0.0)*ds
+          - conditional(dot(u, n) > 0, phi*dot(u, n)*rho, 0.0)*ds
+          - (phi('+') - phi('-'))*(un('+')*rho('+') - un('-')*rho('-'))*dS)
+drho = Function(V)
+
+
+
+
+#Flux Problem
+# Surface Flux equation - build RT2 out of BDM1 and TDG1
+Fluxes = FunctionSpace(mesh,"RT",2)
+Inners = VectorFunctionSpace(mesh,"DG",0)
+W = MixedFunctionSpace((Fluxes,Inners))
+
+wF,wI = TestFunctions(W)
+uF,phi_flux = TrialFunctions(W)
+
+aFs = (
+    0.5 * (inner(wF('+'),n('+'))*inner(uF('+'),n('+')) + 
+     inner(wF('-'),n('-'))*inner(uF('-'),n('-')))*dS(metadata={'quadrature_degree':4})
+    +inner(wF,n)*inner(uF,n) * ds
+    + inner(wI,uF)*dx
+    + inner(wF,phi_flux)*dx
+    )
+LFs = (
+    (inner(wF('+'),n('+'))*un('+')*rho('+') 
+         + inner(wF('-'),n('-'))*un('-')*rho('-'))*dS(metadata={'quadrature_degree':4})
+    + inner(wF,n)* un * rho * ds
+    + inner(wF,n)* (1-un) * rho_in * ds
+    + inner(wI,u)*rho*dx
+    )
+Fs = Function(W)
+Fsproblem = LinearVariationalProblem(aFs, LFs, Fs)
+Fssolver = LinearVariationalSolver(Fsproblem,solver_parameters=params_flux)
+Fssolver.solve()
+Fsf,phi_flux= split(Fs)
+Fn  = 0.5*(dot((Fsf), n) + abs(dot((Fsf), n)))
