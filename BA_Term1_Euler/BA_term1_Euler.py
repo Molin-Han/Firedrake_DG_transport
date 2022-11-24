@@ -11,8 +11,8 @@ from matplotlib.animation import FuncAnimation
 # Problem existing: on boundary condition, the flux solved is
 # not correct!
 
-#mesh = PeriodicUnitSquareMesh(40,40)
-mesh = UnitSquareMesh(40, 40)
+mesh = PeriodicUnitSquareMesh(40,40)
+#mesh = UnitSquareMesh(40, 40)
 #space
 #degree of space
 deg = 1
@@ -27,19 +27,19 @@ x, y = SpatialCoordinate(mesh)
 # divergence 0
 #velocity = as_vector(( (-0.05*x - y + 0.475 ) , ( x - 0.05*y-0.525)))
 # faster divergence 0
-velocity = as_vector(( (0.5 - y ) , ( x - 0.5)))
+#velocity = as_vector(( (0.5 - y ) , ( x - 0.5)))
 
 # velocity satisfies the periodic boundary.
-#velocity = as_vector((-sin(pi * x)* cos(pi * y), cos(pi*x)* sin(pi *y)))
+velocity = as_vector((-sin(pi * x)* cos(pi * y), cos(pi*x)* sin(pi *y)))
 
 
-u = Function(W).interpolate(velocity)
+#u = Function(W).interpolate(velocity)
 
 # velocity from stream function(periodic velocity field)
 
-#stream = FunctionSpace(mesh,"CG", 2)
-#stream_func = Function(stream).interpolate(1/ pi * sin(pi*x)*sin(pi*y))
-#u = Function(W).interpolate(as_vector((-stream_func.dx(1),stream_func.dx(0))))
+stream = FunctionSpace(mesh,"CG", 2)
+stream_func = Function(stream).interpolate(1/ pi * sin(pi*x)*sin(pi*y))
+u = Function(W).interpolate(as_vector((-stream_func.dx(1),stream_func.dx(0))))
 
 
 #initial condition for the atomsphere
@@ -58,9 +58,9 @@ slot_cyl = conditional(sqrt(pow(x-cyl_x0, 2) + pow(y-cyl_y0, 2)) < cyl_r0,
 rho = Function(V).interpolate(1.0 + bell + cone + slot_cyl)
 rho_init = Function(V).assign(rho)
 #initial condition for advection equation
-q = Function(V).interpolate(1.0 + bell + cone + slot_cyl)
+q = Function(V).interpolate( bell + cone + slot_cyl)
 q_init = Function(V).assign(q)
-
+print("1!",q.dat.data.max())
 
 
 #solution list
@@ -226,8 +226,8 @@ qmin = Constant(1.0)
 #set alpha
 alpha_expr = Min(1, ((1 + c_minus - c_plus)* qmax - q_hat_bar * (1 - c_plus) - c_minus * q_minus) / (c_plus * (q_hat_bar - q_plus)))
 #alpha_expr = 0
-alpha_min_expr = Constant(1.0)
-#alpha_min_expr = Min(1, (q_hat_bar * (1 - c_plus) + c_minus * q_minus - (1 + c_minus + c_plus)* qmin) / (c_plus * (q_plus - q_hat_bar)))
+#alpha_min_expr = Constant(1.0)
+alpha_min_expr = Min(1, (q_hat_bar * (1 - c_plus) + c_minus * q_minus - (1 + c_minus + c_plus)* qmin) / (c_plus * (q_plus - q_hat_bar)))
 
 
 
@@ -276,9 +276,22 @@ print(f"stage{i},rho_min=", rho.dat.data.min())
 
 q_bar.project(q)
 limiter_q.apply(q)
+print("2!",q.dat.data.max())
 q_hat_bar.project(q)
-alpha.assign(Min(alpha_expr,alpha_min_expr))
+
+
+alpha_expr_max = Function(DG1)
+alpha_expr_min = Function(DG1)
+alpha_expr_max.assign(alpha_expr)
+alpha_expr_min.assign(alpha_min_expr)
+print(alpha_expr_max.dat.data.max(),alpha_expr_min.dat.data.max())
+alpha.assign(0)
+print("alpha0",alpha.dat.data.max())
+alpha.interpolate(Min(alpha_expr,alpha_min_expr))
+print("alpha",alpha.dat.data.max())
 q.project(q_hat_bar + alpha * (q - q_hat_bar))
+print("q",q.dat.data.max())
+print("q_hat_bar",q_hat_bar.dat.data.max())
 print(f"stage{i},q_max=", q.dat.data.max())
 print(f"stage{i},q_min=", q.dat.data.min())
 
@@ -314,7 +327,7 @@ while t < T - 0.5*dt:
     q_bar.project(q)
     limiter_q.apply(q)
     q_hat_bar.project(q)
-    alpha.assign(Min(alpha_expr,alpha_min_expr))
+    alpha.interpolate(Min(alpha_expr,alpha_min_expr))
     q.project(q_hat_bar + alpha * (q - q_hat_bar))
 
 
@@ -334,8 +347,8 @@ while t < T - 0.5*dt:
     print(f'stage{i},q_max=', q.dat.data.max())
     print(f'stage{i},q_min=', q.dat.data.min())
 
-    #rho_data.write(rho)
-    #q_data.write(q)
+    rho_data.write(rho)
+    q_data.write(q)
 
     #update the step and proceed to the next time step.
     i+=1

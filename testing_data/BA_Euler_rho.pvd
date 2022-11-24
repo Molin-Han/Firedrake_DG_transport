@@ -1,8 +1,5 @@
 <?xml version="1.0" ?>
 <VTKFile type="Collection" version="0.1" byte_order="LittleEndian">
 <Collection>
-<DataSet timestep="0" file="BA_Euler_rho_0.vtu" />
-<DataSet timestep="1" file="BA_Euler_rho_1.vtu" />
-<DataSet timestep="2" file="BA_Euler_rho_2.vtu" />
 </Collection>
 </VTKFile>
