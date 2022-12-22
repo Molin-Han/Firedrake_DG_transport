@@ -157,45 +157,45 @@ beta_expr = fd.Max(0, fd.Min(1, (1 + Courant_minus - Courant_plus)/(c_minus - c_
 
 
 # Density Equation Variational Problem
-L_rho = dtc*(rho*dot(grad(phi),u)*dx
-          - conditional(dot(u, n) < 0, phi*dot(u, n)*rho_in, 0.0)*ds
-          - conditional(dot(u, n) > 0, phi*dot(u, n)*rho, 0.0)*ds
-          - (phi('+') - phi('-'))*(un('+')*rho('+') - un('-')*rho('-'))*dS)
-drho = Function(V)
+L_rho = dtc*(rho*fd.dot(fd.grad(phi), u)*fd.dx
+             - fd.conditional(fd.dot(u, n) < 0, phi*fd.dot(u, n)*rho_in, 0.0)*fd.ds
+             - fd.conditional(fd.dot(u, n) > 0, phi*fd.dot(u, n)*rho, 0.0)*fd.ds
+             - (phi('+') - phi('-'))*(un('+')*rho('+') - un('-')*rho('-'))*fd.dS)
+drho = fd.Function(V)
 
 
 
 
-#Flux Problem
+# Flux Problem
 # Surface Flux equation - build RT2 out of BDM1 and TDG1
-Fluxes = FunctionSpace(mesh,"RT",2)
-Inners = VectorFunctionSpace(mesh,"DG",0)
-W = MixedFunctionSpace((Fluxes,Inners))
+Fluxes = fd.FunctionSpace(mesh, "RT", 2)
+Inners = fd.VectorFunctionSpace(mesh, "DG", 0)
+W = fd.MixedFunctionSpace((Fluxes, Inners))
 
-wF,wI = TestFunctions(W)
-uF,phi_flux = TrialFunctions(W)
+wF, wI = fd.TestFunctions(W)
+uF, phi_flux = fd.TrialFunctions(W)
 
 aFs = (
-    0.5 * (inner(wF('+'),n('+'))*inner(uF('+'),n('+')) + 
-     inner(wF('-'),n('-'))*inner(uF('-'),n('-')))*dS(metadata={'quadrature_degree':4})
-    +inner(wF,n)*inner(uF,n) * ds
-    + inner(wI,uF)*dx
-    + inner(wF,phi_flux)*dx
+    0.5 * (fd.inner(wF('+'), n('+'))*fd.inner(uF('+'), n('+'))
+           + fd.inner(wF('-'), n('-')) * fd.inner(uF('-'), n('-')))*fd.dS(metadata={'quadrature_degree': 4})
+    + fd.inner(wF, n)*fd.inner(uF, n) * fd.ds
+    + fd.inner(wI, uF) * fd.dx
+    + fd.inner(wF, phi_flux) * fd.dx
     )
 LFs = (
-    (inner(wF('+'),n('+'))*un('+')*rho('+') 
-         + inner(wF('-'),n('-'))*un('-')*rho('-'))*dS(metadata={'quadrature_degree':4})
-    + inner(wF,n)* un * rho * ds
-    + inner(wF,n)* (1-un) * rho_in * ds
-    + inner(wI,u)*rho*dx
+    (fd.inner(wF('+'), n('+'))*un('+')*rho('+')
+     + fd.inner(wF('-'), n('-'))*un('-')*rho('-'))*fd.dS(metadata={'quadrature_degree': 4})
+    + fd.inner(wF, n) * un * rho * fd.ds
+    + fd.inner(wF, n) * (1-un) * rho_in * fd.ds
+    + fd.inner(wI, u)*rho*fd.dx
     )
-Fs = Function(W)
-params_flux = {'ksp_type': 'preonly', 'pc_type': 'lu','mat_type': 'aij','pc_factor_mat_solver_type':'mumps'}
-Fsproblem = LinearVariationalProblem(aFs, LFs, Fs)
-Fssolver = LinearVariationalSolver(Fsproblem,solver_parameters=params_flux)
+Fs = fd.Function(W)
+params_flux = {'ksp_type': 'preonly', 'pc_type': 'lu', 'mat_type': 'aij', 'pc_factor_mat_solver_type': 'mumps'}
+Fsproblem = fd.LinearVariationalProblem(aFs, LFs, Fs)
+Fssolver = fd.LinearVariationalSolver(Fsproblem, solver_parameters=params_flux)
 Fssolver.solve()
-Fsf,phi_flux= split(Fs)
-Fn  = 0.5*(dot((Fsf), n) + abs(dot((Fsf), n)))
+Fsf, phi_flux = fd.split(Fs)
+Fn = 0.5*(fd.dot((Fsf), n) + fd.abs(fd.dot((Fsf), n)))
 
 
 
