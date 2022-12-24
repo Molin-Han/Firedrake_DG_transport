@@ -12,12 +12,12 @@ import math
 # not correct!
 
 mesh = fd.PeriodicUnitSquareMesh(40, 40)
-# mesh = UnitSquareMesh(40, 40)
+# mesh = fd.UnitSquareMesh(40, 40)
 # space
 # degree of space
 deg = 1
 V = fd.FunctionSpace(mesh, "DG", deg)
-# W = VectorFunctionSpace(mesh, "CG", 1)
+# W = fd.VectorFunctionSpace(mesh, "CG", 1)
 W = fd.VectorFunctionSpace(mesh, "DG", 1)
 
 x, y = fd.SpatialCoordinate(mesh)
@@ -25,15 +25,15 @@ x, y = fd.SpatialCoordinate(mesh)
 
 # Velocity field
 # divergence 0
-# velocity = as_vector(( (-0.05*x - y + 0.475 ) , ( x - 0.05*y-0.525)))
+# velocity = fd.as_vector(( (-0.05*x - y + 0.475 ) , ( x - 0.05*y-0.525)))
 # faster divergence 0
-# velocity = as_vector(( (0.5 - y ) , ( x - 0.5)))
+# velocity = fd.as_vector(( (0.5 - y ) , ( x - 0.5)))
 
 # velocity satisfies the periodic boundary.
 velocity = fd.as_vector((- fd.sin(fd.pi * x) * fd.cos(fd.pi * y), fd.cos(fd.pi * x) * fd.sin(fd.pi * y)))
 
 
-# u = Function(W).interpolate(velocity)
+# u = fd.Function(W).interpolate(velocity)
 
 # velocity from stream function(periodic velocity field)
 
@@ -201,53 +201,53 @@ Fn = 0.5*(fd.dot((Fsf), n) + fd.abs(fd.dot((Fsf), n)))
 
 
 # Flux limiting for q.
-alpha = Function(DG1)
-q_bar = Function(DG1)
-q_hat_bar = Function(DG1)
+alpha = fd.Function(DG1)
+q_bar = fd.Function(DG1)
+q_hat_bar = fd.Function(DG1)
 
 # q+- factor in alpha
 
-q_plus = Function(DG1)
-w = TestFunction(DG1)
-q_plus_num = Function(DG1)
-q_plus_form = both(Fn * w)  * dS + Fn * w * q *ds
-assemble(q_plus_form, tensor=q_plus_num)
+q_plus = fd.Function(DG1)
+w = fd.TestFunction(DG1)
+q_plus_num = fd.Function(DG1)
+q_plus_form = both(Fn * w) * fd.dS + Fn * w * q * fd.ds
+fd.assemble(q_plus_form, tensor=q_plus_num)
 q_plus.assign((1/c_plus) * q_plus_num)
 
-q_minus = Function(DG1)
-q_minus_num = Function(DG1)
-q_minus_form =- both(Fn * w)  * dS - Fn * w * q_in  *ds
-assemble(q_minus_form, tensor=q_minus_num)
+q_minus = fd.Function(DG1)
+q_minus_num = fd.Function(DG1)
+q_minus_form = -both(Fn * w) * fd.dS - Fn * w * q_in * fd.ds
+fd.assemble(q_minus_form, tensor=q_minus_num)
 q_minus.assign((1/c_minus) * q_minus_num)
 
-#maximum bound for q
-qmax = Constant(2.0)
-qmin = Constant(1.0)
-#set alpha
-alpha_expr = Min(1, ((1 + c_minus - c_plus)* qmax - q_hat_bar * (1 - c_plus) - c_minus * q_minus) / (c_plus * (q_hat_bar - q_plus)))
-#alpha_expr = 0
-#alpha_min_expr = Constant(1.0)
-alpha_min_expr = Min(1, (q_hat_bar * (1 - c_plus) + c_minus * q_minus - (1 + c_minus + c_plus)* qmin) / (c_plus * (q_plus - q_hat_bar)))
+# maximum bound for q
+qmax = fd.Constant(2.0)
+qmin = fd.Constant(1.0)
+# set alpha
+alpha_expr = fd.Min(1, ((1 + c_minus - c_plus) * qmax - q_hat_bar * (1 - c_plus) - c_minus * q_minus) / (c_plus * (q_hat_bar - q_plus)))
+# alpha_expr = 0
+# alpha_min_expr = fd.Constant(1.0)
+alpha_min_expr = fd.Min(1, (q_hat_bar * (1 - c_plus) + c_minus * q_minus - (1 + c_minus + c_plus) * qmin) / (c_plus * (q_plus - q_hat_bar)))
 
 
 
-#variational problem for q
-L_q = phi * rho * q * dx + dtc*(q*dot(grad(phi),Fsf)*dx
-          - conditional(dot(Fsf, n) < 0, phi*dot(Fsf, n)*q_in, 0.0)*ds
-          - conditional(dot(Fsf, n) > 0, phi*dot(Fsf, n)*q, 0.0)*ds
-          - (phi('+') - phi('-'))*(Fn('+')*q('+') - Fn('-')*q('-'))*dS)
-qnew = Function(V)
+# variational problem for q
+L_q = phi * rho * q * fd.dx + dtc * (q * fd.dot(fd.grad(phi), Fsf) * fd.dx
+                                     - fd.conditional(fd.dot(Fsf, n) < 0, phi*fd.dot(Fsf, n)*q_in, 0.0) * fd.ds
+                                     - fd.conditional(fd.dot(Fsf, n) > 0, phi*fd.dot(Fsf, n)*q, 0.0) * fd.ds
+                                     - (phi('+') - phi('-'))*(Fn('+')*q('+') - Fn('-')*q('-'))*fd.dS)
+qnew = fd.Function(V)
 
 
 
 
 # set solvers for rho and q.
 params = {'ksp_type': 'preonly', 'pc_type': 'bjacobi', 'sub_pc_type': 'ilu'}
-prob_rho = LinearVariationalProblem(a, L_rho, drho)
-solv_rho = LinearVariationalSolver(prob_rho, solver_parameters=params)
+prob_rho = fd.LinearVariationalProblem(a, L_rho, drho)
+solv_rho = fd.LinearVariationalSolver(prob_rho, solver_parameters=params)
 
-prob_q = LinearVariationalProblem(b, L_q, qnew)
-solv_q = LinearVariationalSolver(prob_q, solver_parameters=params)
+prob_q = fd.LinearVariationalProblem(b, L_q, qnew)
+solv_q = fd.LinearVariationalSolver(prob_q, solver_parameters=params)
 
 
 
@@ -263,35 +263,35 @@ if step % output_freq == 0:
     qs.append(q.copy(deepcopy=True))
     print("t=", t)
 
-#Apply the limiter to q and density first and find beta, alpha.
+# Apply the limiter to q and density first and find beta, alpha.
 rho_bar.project(rho)
 limiter_rho.apply(rho)
 rho_hat_bar.project(rho)
-#Here rho is the value after applying the Kuzmin limiter i.e. rho_hat
+# Here rho is the value after applying the Kuzmin limiter i.e. rho_hat
 beta.assign(beta_expr)
-#apply the limiting scheme to density
-#rho.project(rho_hat_bar + beta * (rho - rho_hat_bar))
+# apply the limiting scheme to density
+# rho.project(rho_hat_bar + beta * (rho - rho_hat_bar))
 print(f"stage{i},rho_max=", rho.dat.data.max())
 print(f"stage{i},rho_min=", rho.dat.data.min())
 
 q_bar.project(q)
 limiter_q.apply(q)
-print("2!",q.dat.data.max())
+print("2!", q.dat.data.max())
 q_hat_bar.project(q)
 
 
-alpha_expr_max = Function(DG1)
-alpha_expr_min = Function(DG1)
+alpha_expr_max = fd.Function(DG1)
+alpha_expr_min = fd.Function(DG1)
 alpha_expr_max.assign(alpha_expr)
 alpha_expr_min.assign(alpha_min_expr)
-print(alpha_expr_max.dat.data.max(),alpha_expr_min.dat.data.max())
+print(alpha_expr_max.dat.data.max(), alpha_expr_min.dat.data.max())
 alpha.assign(0)
-print("alpha0",alpha.dat.data.max())
-alpha.interpolate(Min(alpha_expr,alpha_min_expr))
-print("alpha",alpha.dat.data.max())
+print("alpha0", alpha.dat.data.max())
+alpha.interpolate(fd.Min(alpha_expr, alpha_min_expr))
+print("alpha", alpha.dat.data.max())
 q.project(q_hat_bar + alpha * (q - q_hat_bar))
-print("q",q.dat.data.max())
-print("q_hat_bar",q_hat_bar.dat.data.max())
+print("q", q.dat.data.max())
+print("q_hat_bar", q_hat_bar.dat.data.max())
 print(f"stage{i},q_max=", q.dat.data.max())
 print(f"stage{i},q_min=", q.dat.data.min())
 
@@ -301,45 +301,45 @@ print(f"stage{i},q_min=", q.dat.data.min())
 # solve the density and the bounded advection
 while t < T - 0.5*dt:
 
-    #first stage
-    #For Flux, it should be solved before rho is solved depending on the way it's defined.
+    # first stage
+    # For Flux, it should be solved before rho is solved depending on the way it's defined.
     Fssolver.solve()
-    #solv1_rho.solve()
-    #rho_new.assign(rho + drho)
-    #rho.assign(rho_new)
-    #rho limiting scheme, beta1 found.
+    # solv1_rho.solve()
+    # rho_new.assign(rho + drho)
+    # rho.assign(rho_new)
+    # rho limiting scheme, beta1 found.
     rho_bar.project(rho)
     limiter_rho.apply(rho)
     rho_hat_bar.project(rho)
     beta.assign(beta_expr)
-    #apply the limiting scheme
+    # apply the limiting scheme
     rho.project(rho_hat_bar + beta * (rho - rho_hat_bar))
-    #For rho_1
+    # For rho_1
     solv_rho.solve()
     rho_new.assign(rho + drho)
 
-    #For q_1
+    # For q_1
     solv_q.solve()
     q.assign(qnew)
 
 
-    #q limiting scheme
+    # q limiting scheme
     q_bar.project(q)
     limiter_q.apply(q)
     q_hat_bar.project(q)
-    alpha.interpolate(Min(alpha_expr,alpha_min_expr))
+    alpha.interpolate(fd.Min(alpha_expr, alpha_min_expr))
     q.project(q_hat_bar + alpha * (q - q_hat_bar))
 
 
-    #rho.assign(rho_new)
+    # rho.assign(rho_new)
     rho.assign(rho + drho)
-    ### Testing
-    #rho limiting scheme, beta1 found.
+    # ## Testing
+    # rho limiting scheme, beta1 found.
     rho_bar.project(rho)
     limiter_rho.apply(rho)
     rho_hat_bar.project(rho)
     beta.assign(beta_expr)
-    #apply the limiting scheme
+    # apply the limiting scheme
     rho.project(rho_hat_bar + beta * (rho - rho_hat_bar))
 
     print(f'stage{i},rho_max=', rho.dat.data.max())
@@ -350,8 +350,8 @@ while t < T - 0.5*dt:
     rho_data.write(rho)
     q_data.write(q)
 
-    #update the step and proceed to the next time step.
-    i+=1
+    # update the step and proceed to the next time step.
+    i += 1
     step += 1
     t += dt
 
@@ -361,12 +361,10 @@ while t < T - 0.5*dt:
         print("t=", t)
 
 
-
-
-L2_err_rho = sqrt(assemble((rho - rho_init)*(rho - rho_init)*dx))
-L2_init_rho = sqrt(assemble(rho_init*rho_init*dx))
+L2_err_rho = fd.sqrt(fd.assemble((rho - rho_init)*(rho - rho_init) * fd.dx))
+L2_init_rho = fd.sqrt(fd.assemble(rho_init * rho_init * fd.dx))
 print("error_rho =", L2_err_rho/L2_init_rho)
 
-L2_err_q = sqrt(assemble((q - q_init)*(q - q_init)*dx))
-L2_init_q = sqrt(assemble(q_init*q_init*dx))
+L2_err_q = fd.sqrt(fd.assemble((q - q_init)*(q - q_init) * fd.dx))
+L2_init_q = fd.sqrt(fd.assemble(q_init * q_init * fd.dx))
 print("error_q =", L2_err_q/L2_init_q)
