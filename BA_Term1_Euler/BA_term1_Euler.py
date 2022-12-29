@@ -70,7 +70,6 @@ rho_data = fd.File('BA_Euler_rho.pvd')
 q_data = fd.File('BA_Euler_q.pvd')
 
 
-
 # Initial setting for time
 # time period
 T = 2 * math.pi / 40
@@ -78,7 +77,6 @@ dt = 2 * math.pi / 1200
 dtc = fd.Constant(dt)
 rho_in = fd.Constant(1.0)
 q_in = fd.Constant(1.0)
-
 
 
 # trial functions and test functions
@@ -94,8 +92,6 @@ b = phi*rho_new*dq_trial*fd.dx
 # elements
 n = fd.FacetNormal(mesh)
 un = 0.5*(fd.dot(u, n) + fd.abs(fd.dot(u, n)))
-
-
 
 
 # Set Kuzmin limiter
@@ -141,8 +137,6 @@ fd.assemble(Courant_num_form_minus, tensor=Courant_num_minus)
 Courant_minus.assign(Courant_num_minus / Courant_denom_minus)
 
 
-
-
 # Set for the Flux Limiter for Density Equation
 beta = fd.Function(DG1)
 
@@ -162,8 +156,6 @@ L_rho = dtc*(rho*fd.dot(fd.grad(phi), u)*fd.dx
              - fd.conditional(fd.dot(u, n) > 0, phi*fd.dot(u, n)*rho, 0.0)*fd.ds
              - (phi('+') - phi('-'))*(un('+')*rho('+') - un('-')*rho('-'))*fd.dS)
 drho = fd.Function(V)
-
-
 
 
 # Flux Problem
@@ -198,8 +190,6 @@ Fsf, phi_flux = fd.split(Fs)
 Fn = 0.5*(fd.dot((Fsf), n) + fd.abs(fd.dot((Fsf), n)))
 
 
-
-
 # Flux limiting for q.
 alpha = fd.Function(DG1)
 q_bar = fd.Function(DG1)
@@ -230,15 +220,12 @@ alpha_expr = fd.Min(1, ((1 + c_minus - c_plus) * qmax - q_hat_bar * (1 - c_plus)
 alpha_min_expr = fd.Min(1, (q_hat_bar * (1 - c_plus) + c_minus * q_minus - (1 + c_minus + c_plus) * qmin) / (c_plus * (q_plus - q_hat_bar)))
 
 
-
 # variational problem for q
 L_q = phi * rho * q * fd.dx + dtc * (q * fd.dot(fd.grad(phi), Fsf) * fd.dx
                                      - fd.conditional(fd.dot(Fsf, n) < 0, phi*fd.dot(Fsf, n)*q_in, 0.0) * fd.ds
                                      - fd.conditional(fd.dot(Fsf, n) > 0, phi*fd.dot(Fsf, n)*q, 0.0) * fd.ds
                                      - (phi('+') - phi('-'))*(Fn('+')*q('+') - Fn('-')*q('-'))*fd.dS)
 qnew = fd.Function(V)
-
-
 
 
 # set solvers for rho and q.
@@ -248,7 +235,6 @@ solv_rho = fd.LinearVariationalSolver(prob_rho, solver_parameters=params)
 
 prob_q = fd.LinearVariationalProblem(b, L_q, qnew)
 solv_q = fd.LinearVariationalSolver(prob_q, solver_parameters=params)
-
 
 
 # begin looping
@@ -296,7 +282,6 @@ print(f"stage{i},q_max=", q.dat.data.max())
 print(f"stage{i},q_min=", q.dat.data.min())
 
 
-
 # Main Body
 # solve the density and the bounded advection
 while t < T - 0.5*dt:
@@ -322,14 +307,12 @@ while t < T - 0.5*dt:
     solv_q.solve()
     q.assign(qnew)
 
-
     # q limiting scheme
     q_bar.project(q)
     limiter_q.apply(q)
     q_hat_bar.project(q)
     alpha.interpolate(fd.Min(alpha_expr, alpha_min_expr))
     q.project(q_hat_bar + alpha * (q - q_hat_bar))
-
 
     # rho.assign(rho_new)
     rho.assign(rho + drho)
