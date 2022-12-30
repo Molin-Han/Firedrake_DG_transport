@@ -58,7 +58,8 @@ slot_cyl = fd.conditional(fd.sqrt(pow(x-cyl_x0, 2) + pow(y-cyl_y0, 2)) < cyl_r0,
 rho = fd.Function(V).interpolate(1.0 + bell + cone + slot_cyl)
 rho_init = fd.Function(V).assign(rho)
 # initial condition for advection equation
-q = fd.Function(V).interpolate(1.0 + bell + cone + slot_cyl)
+# q = fd.Function(V).interpolate(1.0 + bell + cone + slot_cyl)
+q = fd.Function(V).interpolate(bell + cone + slot_cyl)
 q_init = fd.Function(V).assign(q)
 print("initial maxmimum for q", q.dat.data.max())
 
