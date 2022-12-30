@@ -11,8 +11,8 @@ import math
 # Problem existing: on boundary condition, the flux solved is
 # not correct!
 
-mesh = fd.PeriodicUnitSquareMesh(40, 40)
-# mesh = fd.UnitSquareMesh(40, 40)
+# mesh = fd.PeriodicUnitSquareMesh(40, 40)
+mesh = fd.UnitSquareMesh(40, 40)
 # space
 # degree of space
 deg = 1
@@ -27,10 +27,10 @@ x, y = fd.SpatialCoordinate(mesh)
 # divergence 0
 # velocity = fd.as_vector(( (-0.05*x - y + 0.475 ) , ( x - 0.05*y-0.525)))
 # faster divergence 0
-# velocity = fd.as_vector(( (0.5 - y ) , ( x - 0.5)))
+# velocity = fd.as_vector(((0.5 - y), (x - 0.5)))
 
 # velocity satisfies the periodic boundary.
-velocity = fd.as_vector((- fd.sin(fd.pi * x) * fd.cos(fd.pi * y), fd.cos(fd.pi * x) * fd.sin(fd.pi * y)))
+# velocity = fd.as_vector((- fd.sin(fd.pi * x) * fd.cos(fd.pi * y), fd.cos(fd.pi * x) * fd.sin(fd.pi * y)))
 
 
 # u = fd.Function(W).interpolate(velocity)
@@ -58,7 +58,7 @@ slot_cyl = fd.conditional(fd.sqrt(pow(x-cyl_x0, 2) + pow(y-cyl_y0, 2)) < cyl_r0,
 rho = fd.Function(V).interpolate(1.0 + bell + cone + slot_cyl)
 rho_init = fd.Function(V).assign(rho)
 # initial condition for advection equation
-q = fd.Function(V).interpolate(bell + cone + slot_cyl)
+q = fd.Function(V).interpolate(1.0 + bell + cone + slot_cyl)
 q_init = fd.Function(V).assign(q)
 print("initial maxmimum for q", q.dat.data.max())
 
