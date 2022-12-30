@@ -60,7 +60,7 @@ rho_init = fd.Function(V).assign(rho)
 # initial condition for advection equation
 q = fd.Function(V).interpolate(bell + cone + slot_cyl)
 q_init = fd.Function(V).assign(q)
-print("1!", q.dat.data.max())
+print("initial maxmimum for q", q.dat.data.max())
 
 
 # solution list
@@ -91,7 +91,7 @@ b = phi*rho_new*dq_trial*fd.dx
 
 # elements
 n = fd.FacetNormal(mesh)
-un = 0.5*(fd.dot(u, n) + fd.abs(fd.dot(u, n)))
+un = 0.5*(fd.dot(u, n) + abs(fd.dot(u, n)))
 
 
 # Set Kuzmin limiter
@@ -121,7 +121,7 @@ Courant_plus = fd.Function(DG1)
 fd.assemble(One*v*fd.dx, tensor=Courant_denom_plus)
 fd.assemble(Courant_num_form_plus, tensor=Courant_num_plus)
 Courant_plus.assign(Courant_num_plus/Courant_denom_plus)
-print(fd.norm(Courant_plus))
+print("Courant number for the initial problem",fd.norm(Courant_plus))
 
 # c-
 Courant_num_minus = fd.Function(DG1)
@@ -187,7 +187,7 @@ Fsproblem = fd.LinearVariationalProblem(aFs, LFs, Fs)
 Fssolver = fd.LinearVariationalSolver(Fsproblem, solver_parameters=params_flux)
 Fssolver.solve()
 Fsf, phi_flux = fd.split(Fs)
-Fn = 0.5*(fd.dot((Fsf), n) + fd.abs(fd.dot((Fsf), n)))
+Fn = 0.5*(fd.dot((Fsf), n) + abs(fd.dot((Fsf), n)))
 
 
 # Flux limiting for q.
@@ -262,7 +262,7 @@ print(f"stage{i},rho_min=", rho.dat.data.min())
 
 q_bar.project(q)
 limiter_q.apply(q)
-print("2!", q.dat.data.max())
+print("Maximum value of q after applying limiter", q.dat.data.max())
 q_hat_bar.project(q)
 
 
@@ -270,14 +270,16 @@ alpha_expr_max = fd.Function(DG1)
 alpha_expr_min = fd.Function(DG1)
 alpha_expr_max.assign(alpha_expr)
 alpha_expr_min.assign(alpha_min_expr)
-print(alpha_expr_max.dat.data.max(), alpha_expr_min.dat.data.max())
+print("Alpha_max and Alpha_min", alpha_expr_max.dat.data.min(), alpha_expr_min.dat.data.min())
 alpha.assign(0)
-print("alpha0", alpha.dat.data.max())
+print("alpha_before", alpha.dat.data.min())
 alpha.interpolate(fd.Min(alpha_expr, alpha_min_expr))
-print("alpha", alpha.dat.data.max())
+print("alpha_after_interpolate", alpha.dat.data.min())
+print("q_limiter_off", q.dat.data.max())
+#q.interpolate(q_hat_bar + alpha * (q - q_hat_bar))
 q.project(q_hat_bar + alpha * (q - q_hat_bar))
-print("q", q.dat.data.max())
 print("q_hat_bar", q_hat_bar.dat.data.max())
+print("q_limiter_on", q.dat.data.max())
 print(f"stage{i},q_max=", q.dat.data.max())
 print(f"stage{i},q_min=", q.dat.data.min())
 
