@@ -1,0 +1,344 @@
+\documentclass{article}
+\usepackage{amsmath,amssymb,stmaryrd}
+\def\MM#1{\boldsymbol{#1}}
+\newcommand{\pp}[2]{\frac{\partial #1}{\partial #2}} 
+\newcommand{\dede}[2]{\frac{\delta #1}{\delta #2}}
+\newcommand{\dd}[2]{\frac{\diff#1}{\diff#2}}
+\newcommand{\dt}[1]{\diff\!#1}
+\def\MM#1{\boldsymbol{#1}}
+\DeclareMathOperator{\diff}{d}
+\DeclareMathOperator{\DIV}{DIV}
+\DeclareMathOperator{\D}{D}
+\bibliographystyle{plain}
+\newcommand{\vecx}[1]{\MM{#1}}
+\newtheorem{definition}{Definition}
+\newcommand{\code}[1]{{\ttfamily #1}} 
+%uncomment \solnsfalse to remove solution set
+\newif\ifsolns
+%\solnstrue
+\solnsfalse
+
+\ifsolns
+% with solutions
+\newcommand{\soln}[1]{\newline \noindent {\bfseries Solution:} {\itshape #1}}
+\else
+% without solutions
+\newcommand{\soln}[1]{}
+\fi
+\usepackage[margin=2cm]{geometry}
+
+\usepackage{fancybox}
+\begin{document}
+\title{Notes on conservative, bounded, advection schemes}
+\author{Colin Cotter}
+\maketitle
+
+As described in \cite{thuburn1996multidimensional}, the conservation
+of a tracer $q$ can be most easily derived from the conservative form 
+of the advection equations
+\begin{equation}
+(\rho q)_t + \nabla\cdot(\MM{u}\rho q)=0,
+\end{equation}
+where the density satisfies the continuity equation
+\begin{equation}
+\rho_t + \nabla\cdot(\MM{u}\rho) = 0.
+\end{equation}
+On the other hand, the $L_\infty$ bounds for $q$ are most easily derived
+from the characteristic form
+\begin{equation}
+q_t + \MM{u}\cdot\nabla q = 0.
+\end{equation}
+
+\section{Continuity equation}
+The first step is that we need a positive scheme for $\rho$,
+\emph{i.e.}, $\rho(x,t)>0$ if $\rho(x,0)>0$. 
+
+The time-continuous discontinuous Galerkin (DG) scheme for $\rho \in
+DG(n)$ is defined on an element $e$ with boundary $\partial e$ by
+\begin{equation}
+\dd{}{t}\int_e \phi \rho \diff x - \int_e \nabla \phi \cdot\MM{u} \rho\diff x
++ \int_{\partial e} \phi \MM{u}\cdot\MM{n} \tilde{\rho} \diff s = 0,
+\quad \forall \phi \in DG(n), 
+\end{equation}
+where $\MM{n}$ is the normal to the boundary, and $\tilde{\rho}$ is
+the value of $\rho$ on the upwind side of $\partial e$.
+
+Here we consider the forward Euler time discretisation, given by
+\begin{equation}
+\int_e \phi \rho^{n+1} \diff x 
+= \int_e \phi \rho^n \diff x 
++ \Delta t \int_e \nabla \phi \cdot\MM{u} \rho^n\diff x
+- \Delta t\int_{\partial e} \phi \MM{u}\cdot\MM{n} \tilde{\rho}^n \diff s = 0,
+\quad \forall \phi \in DG(n).
+\end{equation}
+Forward Euler steps can be concatenated in SSPRK schemes to obtain 
+higher-order time discretisations.
+
+The above linear scheme is not positivity-preserving. To obtain a
+positivity-preserving scheme, we take the following steps:
+
+\begin{enumerate}
+\item A pre-processing limiter applied to $\rho$, such as the
+  Barth-Jespersen limiter or the Kuzmin vertex-based limiter, that
+  sets bounds $(\rho_{\min},\rho_{\max})$ on each element $e$, based
+  on the mean value $\overline{\rho}^n_e$, defined by
+\begin{equation}
+\overline{\rho}^n = \frac{1}{|e|}\int_e \rho^n \diff x,
+\end{equation}
+and the value in selected surrounding elements. The limiter is then
+defined by 
+\begin{equation}
+\Pi_1\rho^n|_e = \overline{\rho}^n + \alpha (\rho^n - \overline{\rho}^n),
+\end{equation}
+with $0\leq \alpha \leq 1$ chosen as the maximum value such that
+$\Pi\rho^n$ lies within the bounds in element $e$. Note that such a
+limiter does not alter the element integral of $\rho$, and so does not
+violate conservation.
+
+If the element mean values of $\rho^n$ are all positive, then so are
+the bounds, and therefore $\Pi\rho^n$ is positive everywhere.
+\item A second pre-processing limiter $\Pi_2$ to guarantee that the
+  element means $\overline{\rho}^{n+1}$ will all be positive following the
+  Euler step. The goal of this section is to introduce such a limiter.
+\item The application of the forward Euler step,
+\begin{equation}
+\label{eq:forward euler rho}
+\int_e \phi \rho^{n+1} \diff x 
+= \int_e \phi \rho^* \diff x 
++ \Delta t \int_e \nabla \phi \cdot\MM{u} \rho^*\diff x
+- \Delta t\int_{\partial e} \phi \MM{u}\cdot\MM{n} 
+\rho^* \diff s = 0,
+\quad \forall \phi \in DG(n),
+\end{equation}
+where $\rho^*=\Pi_2\hat{\rho} = \Pi_2\Pi_1\rho^n$.
+\end{enumerate}
+
+We now develop the limiter $\Pi_2$.
+
+If we choose $\phi$ as the indicator function for element $e$, \emph{i.e.},
+\begin{equation}
+\phi(\MM{x}) = \left \{
+\begin{array}{rl}
+1 & \mbox{ if } \MM{x}\in e, \\
+0 & \mbox{ otherwise,} \\
+\end{array}\right.
+\end{equation}
+then Equation \eqref{eq:forward euler rho} becomes
+\begin{equation}
+\int_e \rho^{n+1} \diff x 
+= \int_e \rho^* \diff x 
+- \Delta t\int_{\partial e} \MM{u}\cdot\MM{n} 
+\rho^* \diff s = 0.
+\end{equation}
+This may be written in the form
+\begin{equation}
+\label{eq:rho n+1}
+\overline{\rho}^{n+1} = \overline{\rho}^n\left(1 + c^- - c^+\right),
+\end{equation}
+where 
+\begin{equation}
+  c^{\pm} = \pm\frac{\Delta t}{|e|}
+\int_{\partial e^{\pm}} \MM{u}\cdot\MM{n} 
+\frac{\tilde{\rho}^*}{\overline{\rho}^n}\diff s,
+\end{equation}
+where $\partial e^+$, $\partial e^-$ are the parts of $\partial e$
+where $\MM{u}\cdot\MM{n}$ is positive and negative respectively.  Both
+$c^+$ and $c^-$ are positive if $\rho$ is positive everywhere. 
+
+For $\overline{\rho}^{n+1}$ to be positive, we need
+\begin{equation}
+\label{eq:positivity}
+c^+ < 1 + c^-.
+\end{equation}
+This will always be satisfied for sufficiently small $\Delta t$. 
+However, it may be violated if there are dramatic jumps in $\rho$, even
+for moderate values of the upwind/downwind Courant numbers
+\begin{equation}
+\tilde{c}^{\pm} = \pm\frac{\Delta t}{|e|}\int_{\partial e^\pm}
+\MM{u}\cdot\MM{n} \diff s.
+\end{equation}
+Hence, we use a failsafe limiter to adjust the slope in each element
+where Equation \eqref{eq:positivity} is not satisfied, to ensure
+positivity.
+
+Since $c^-$ depends on values of $\rho$ from outside element $e$,
+it will not be altered by limiting the slope in element $e$. Hence,
+if the positivity condition \eqref{eq:positivity} is not satisfied,
+applying a limiter
+\begin{equation}
+\rho^* = \overline{\tilde{\rho}} + \beta\left(
+\tilde{\rho} - \overline{\tilde{\rho}}
+\right),
+\end{equation}
+where $0\le \beta \le 1$, results in replacing $c^+$ by
+\begin{equation}
+\tilde{c}^+ + \beta(c^+-\tilde{c}^+).
+\end{equation}
+Hence, the positivity condition becomes
+\begin{equation}
+\label{eq:limited positivity}
+\tilde{c}^+ + \beta(c^+-\tilde{c}^+) < 1 + c^-.
+\end{equation}
+It is always possible to achieve this condition by setting
+$\beta=0$, in which case the condition becomes
+\begin{equation}
+\tilde{c}^+ < 1 + c^-,
+\end{equation}
+for which the CFL condition
+\begin{equation}
+\tilde{c}^+ < 1,
+\end{equation}
+is sufficient. Hence, we choose $\beta\leq 1$ to be as
+large as possible provided that Equation \eqref{eq:limited positivity}
+is satisfied, \emph{i.e.},
+\begin{equation}
+\beta =
+\left\{
+\begin{array}{c r}
+ \max\left(0,\min\left(1,\frac{1 + c^- - \tilde{c}^+}
+{c^+-\tilde{c}^+}\right)\right)
+\end{array}\right..
+\end{equation}
+
+\section{Reconstruction of flux}
+
+\section{Bounded advection}
+
+The forward Euler conservative DG discretisation for the transport
+equation for $q$ is,
+\begin{equation}
+\int_e \phi \rho^{n+1}q^{n+1} \diff x 
+= \int_e \phi \rho^nq^n \diff x 
++ \Delta t \int_e \nabla \phi \cdot\MM{F}^n q^n\diff x
+- \Delta t\int_{\partial e} \phi \MM{F}^n\cdot\MM{n} \tilde{q}^n \diff s = 0,
+\quad \forall \phi \in DG(n),
+\end{equation}
+where $\tilde{q}^n$ is the value of $q^n$ on the upwind side of
+$\partial e$.
+
+Since this linear scheme does not guarantee bounds on $q^{n+1}$, we
+also apply limiters to ensure this, following the same two step
+strategy, first ensuring that all values of $q$ lie between bounds
+defined from element mean values, then adjusting the slope so that the
+outflow values guarantee positive element mean values in the next
+timestep. We use $\rho$-weighted element mean values defined by
+\begin{equation}
+\overline{q} = \frac{1}{\overline{\rho^n}}\int_e \rho^n q \diff x,
+\end{equation}
+so that
+\begin{equation}
+\overline{\rho^{n}}\overline{q} = \int_e \rho^n q \diff x.
+\end{equation}
+
+In this case, replacing $q$ by the limited function
+\begin{equation}
+\Pi_1q = \overline{q} + \alpha(q-\overline{q}),
+\end{equation}
+does not violate conservation, since
+\begin{align}
+\int_e \rho^n\Pi_1q \diff x &= \overline{q}\int_e \rho^n\diff x + \alpha 
+\left(\int_e \rho^nq\diff x-\overline{q}\int_e \rho^n\diff x\right), \\
+&= \overline{\rho^n}\overline{q} + \alpha\left(\overline{\rho^n}\overline{q}
+-\overline{\rho^n}\overline{q}\right) = \overline{\rho^n}\overline{q},
+\end{align}
+as required.
+
+The forward Euler timestep for $q$ is then as follows:
+\begin{enumerate}
+\item A pre-processing limiter applied to $q$, such as the
+  Barth-Jespersen limiter or the Kuzmin vertex-based limiter, that
+  sets bounds $(q_{\min},q_{\max})$ on each element $e$, based on the
+  mean value $\overline{q}^n_e$, and the value in selected surrounding
+  elements. The limiter is then defined by
+\begin{equation}
+\Pi_1q^n|_e = \overline{q}^n + \alpha (q^n - \overline{q}^n),
+\end{equation}
+with $0\leq \alpha \leq 1$ chosen as the maximum value such that
+$\Pi q^n$ lies within the bounds in element $e$.
+
+If the element mean values of $q^n$ are all positive, then so are
+the bounds, and therefore $\Pi q^n$ is positive everywhere.
+\item A second pre-processing limiter $\Pi_2$ to guarantee that the
+  element means $\overline{q}^{n+1}$ will lie within their bounds at the
+  following the Euler step. The goal of this section is to introduce
+  such a limiter.
+\item The application of the forward Euler step,
+\begin{equation}
+\label{eq:forward euler q}
+\int_e \phi\rho^{n+1} q^{n+1} \diff x 
+= \int_e \phi \rho^n q^* \diff x 
++ \Delta t \int_e \nabla \phi \cdot\MM{u}\rho^n q^*\diff x
+- \Delta t\int_{\partial e} \phi \MM{u}\cdot\MM{n} 
+\rho^n q^* \diff s = 0,
+\quad \forall \phi \in DG(n),
+\end{equation}
+where $q^*=\Pi_2\hat{q} = \Pi_2\Pi_1q^n$.
+\end{enumerate}
+
+We now develop the limiter $\Pi_2$ for $q$, assuming that $q$ already
+satisfies the bounds in each element.
+
+If we choose $\phi$ as the indicator function for element $e$, then
+Equation \eqref{eq:forward euler q} becomes
+\begin{equation}
+\int_e \rho^{n+1} q^{n+1}\diff x 
+= \int_e \rho^n q^*\diff x 
+- \Delta t\int_{\partial e} \MM{u}\cdot\MM{n} 
+\rho^nq^* \diff s = 0.
+\end{equation}
+This may be written in the form
+\begin{equation}
+\overline{\rho}^{n+1}\overline{q^{n+1}}
+= \overline{\rho}^n\left(q^n + c^-q^- - c^+q^+\right),
+\end{equation}
+where
+\begin{align}
+\overline{q^{n+1}} & = \frac{1}{\overline{\rho^{n+1}}}\int_e
+\rho^{n+1}q^{n+1}\diff x, \\
+q^{\pm} & = \pm\frac{1}{c^{\pm}}\int_{\partial e^{\pm}}
+\MM{F}\cdot\MM{n}\tilde{q}\diff s,
+\end{align}
+and $c^\pm>0$ are defined as before. Finally, making use
+of Equation \eqref{eq:rho n+1}, we obtain
+\begin{equation}
+(1+ c^- - c^+)\overline{q^{n+1}}
+= \bar{q}^n + c^-q^- - c^+q^+,
+\end{equation}
+where positivity ensures that $1+c^--c^+>0$. We see that
+$\overline{q}^{n+1}$ might exceed the bounds if $q^+$ is too far below
+$\bar{q}^n$.
+
+If our limiter scheme has an imposed maximum bound $\bar{q}^{n+1}
+\leq q^{\max}$, we now need to adjust the slope in $q^n$,
+\begin{equation}
+q^n \mapsto \bar{q}^n + \beta(q^n - \bar{q}^n),
+\end{equation}
+where $0\leq \beta \leq 1$, in order to replace
+\begin{equation}
+q^+ \mapsto \bar{q}^n + \beta(q^+-\bar{q}^n).
+\end{equation}
+Since $q^-\leq q^{\max}$, since we have already limited the slope so
+that $q$ satisfies the element bounds, which are the same on each side
+of each element boundary. Therefore, if we choose $\beta=0$, the update 
+becomes
+\begin{equation}
+(1+ c^- - c^+)\overline{q}^{n+1}
+= \bar{q}^n(1-c^-) + c^-q^- < q^{\max}(1 + c^- - c^+),
+\end{equation}
+and the bound will be satisfied as required. We choose the maximum
+value of $\beta\leq 1$ such that
+\begin{equation}
+\bar{q}^n(1-c^+) + c^-q^- - c^+\beta(q^+-\bar{q}^n)
+\leq (1+ c^- - c^+)q^{\max},
+\end{equation}
+\emph{i.e.},
+\begin{equation}
+\beta = \min\left(1,
+ \frac{(1+ c^- - c^+)q^{\max} 
+- \left(\bar{q}^n(1-c^+) + c^-q^- \right)}
+{c^+(\bar{q}^n-{q}^+)}\right).
+\end{equation}
+
+\bibliography{limiter_notes}
+
+\end{document}
