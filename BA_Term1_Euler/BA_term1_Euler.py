@@ -75,7 +75,7 @@ q_data = fd.File('BA_Euler_q.pvd')
 # time period
 # T = 2 * math.pi
 # dt = 2 * math.pi / 1200
-T = math.pi/30
+T = math.pi
 dt = math.pi / 600
 dtc = fd.Constant(dt)
 rho_in = fd.Constant(1.0)
@@ -243,7 +243,7 @@ solv_q = fd.LinearVariationalSolver(prob_q, solver_parameters=params)
 # begin looping
 t = 0.0
 step = 0
-output_freq = 1
+output_freq = 10
 # stage
 i = 0
 
