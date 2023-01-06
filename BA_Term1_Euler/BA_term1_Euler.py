@@ -11,8 +11,8 @@ import math
 # Problem existing: on boundary condition, the flux solved is
 # not correct!
 
-# mesh = fd.PeriodicUnitSquareMesh(40, 40)
-mesh = fd.UnitSquareMesh(40, 40)
+mesh = fd.PeriodicUnitSquareMesh(40, 40)
+# mesh = fd.UnitSquareMesh(40, 40)
 # space
 # degree of space
 deg = 1
@@ -58,8 +58,8 @@ slot_cyl = fd.conditional(fd.sqrt(pow(x-cyl_x0, 2) + pow(y-cyl_y0, 2)) < cyl_r0,
 rho = fd.Function(V).interpolate(1.0 + bell + cone + slot_cyl)
 rho_init = fd.Function(V).assign(rho)
 # initial condition for advection equation
-# q = fd.Function(V).interpolate(1.0 + bell + cone + slot_cyl)
-q = fd.Function(V).interpolate(bell + cone + slot_cyl)
+#q = fd.Function(V).interpolate(1.0 + bell + cone + slot_cyl)
+q = fd.Function(V).interpolate(0.000001+bell + cone + slot_cyl)
 q_init = fd.Function(V).assign(q)
 print("initial maxmimum for q", q.dat.data.max())
 
@@ -73,8 +73,10 @@ q_data = fd.File('BA_Euler_q.pvd')
 
 # Initial setting for time
 # time period
-T = 2 * math.pi / 40
-dt = 2 * math.pi / 1200
+# T = 2 * math.pi
+# dt = 2 * math.pi / 1200
+T = math.pi/30
+dt = math.pi / 600
 dtc = fd.Constant(dt)
 rho_in = fd.Constant(1.0)
 q_in = fd.Constant(1.0)
@@ -241,7 +243,7 @@ solv_q = fd.LinearVariationalSolver(prob_q, solver_parameters=params)
 # begin looping
 t = 0.0
 step = 0
-output_freq = 2
+output_freq = 1
 # stage
 i = 0
 
@@ -333,8 +335,7 @@ while t < T - 0.5*dt:
     print(f'stage{i},q_max=', q.dat.data.max())
     print(f'stage{i},q_min=', q.dat.data.min())
 
-    rho_data.write(rho)
-    q_data.write(q)
+    
 
     # update the step and proceed to the next time step.
     i += 1
@@ -345,6 +346,8 @@ while t < T - 0.5*dt:
         rhos.append(rho.copy(deepcopy=True))
         qs.append(q.copy(deepcopy=True))
         print("t=", t)
+        rho_data.write(rho)
+        q_data.write(q)
 
 
 L2_err_rho = fd.sqrt(fd.assemble((rho - rho_init)*(rho - rho_init) * fd.dx))
