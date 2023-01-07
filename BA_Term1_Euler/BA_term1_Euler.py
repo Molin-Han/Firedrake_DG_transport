@@ -30,16 +30,16 @@ x, y = fd.SpatialCoordinate(mesh)
 # velocity = fd.as_vector(((0.5 - y), (x - 0.5)))
 
 # velocity satisfies the periodic boundary.
-# velocity = fd.as_vector((- fd.sin(fd.pi * x) * fd.cos(fd.pi * y), fd.cos(fd.pi * x) * fd.sin(fd.pi * y)))
+velocity = fd.as_vector((- fd.sin(fd.pi * x) * fd.cos(fd.pi * y), fd.cos(fd.pi * x) * fd.sin(fd.pi * y)))
 
 
-# u = fd.Function(W).interpolate(velocity)
+u = fd.Function(W).interpolate(velocity)
 
 # velocity from stream function(periodic velocity field)
 
-stream = fd.FunctionSpace(mesh, "CG", 2)
-stream_func = fd.Function(stream).interpolate(1 / fd.pi * fd.sin(fd.pi * x) * fd.sin(fd.pi * y))
-u = fd.Function(W).interpolate(fd.as_vector((-stream_func.dx(1), stream_func.dx(0))))
+# stream = fd.FunctionSpace(mesh, "CG", 2)
+#stream_func = fd.Function(stream).interpolate(1 / fd.pi * fd.sin(fd.pi * x) * fd.sin(fd.pi * y))
+#u = fd.Function(W).interpolate(fd.as_vector((-stream_func.dx(1), stream_func.dx(0))))
 
 
 # initial condition for the atomsphere
@@ -285,7 +285,8 @@ print("q_hat_bar", q_hat_bar.dat.data.max())
 print("q_limiter_on", q.dat.data.max())
 print(f"stage{i},q_max=", q.dat.data.max())
 print(f"stage{i},q_min=", q.dat.data.min())
-
+rho_data.write(rho)
+q_data.write(q)
 
 # Main Body
 # solve the density and the bounded advection
