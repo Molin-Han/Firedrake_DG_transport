@@ -38,8 +38,8 @@ u = fd.Function(W).interpolate(velocity)
 # velocity from stream function(periodic velocity field)
 
 # stream = fd.FunctionSpace(mesh, "CG", 2)
-#stream_func = fd.Function(stream).interpolate(1 / fd.pi * fd.sin(fd.pi * x) * fd.sin(fd.pi * y))
-#u = fd.Function(W).interpolate(fd.as_vector((-stream_func.dx(1), stream_func.dx(0))))
+# stream_func = fd.Function(stream).interpolate(1 / fd.pi * fd.sin(fd.pi * x) * fd.sin(fd.pi * y))
+# u = fd.Function(W).interpolate(fd.as_vector((-stream_func.dx(1), stream_func.dx(0))))
 
 
 # initial condition for the atomsphere
