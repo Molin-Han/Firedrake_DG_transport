@@ -30,16 +30,19 @@ x, y = fd.SpatialCoordinate(mesh)
 # velocity = fd.as_vector(((0.5 - y), (x - 0.5)))
 
 # velocity satisfies the periodic boundary.
-velocity = fd.as_vector((- fd.sin(fd.pi * x) * fd.cos(fd.pi * y), fd.cos(fd.pi * x) * fd.sin(fd.pi * y)))
+# velocity = fd.as_vector((- fd.sin(fd.pi * x) * fd.cos(fd.pi * y), fd.cos(fd.pi * x) * fd.sin(fd.pi * y)))
 
 
-u = fd.Function(W).interpolate(velocity)
+# Trial Velocity
+# velocity = fd.as_vector((0.5 - x + y, x - y - 0.5))
+
+# u = fd.Function(W).interpolate(velocity)
 
 # velocity from stream function(periodic velocity field)
 
-# stream = fd.FunctionSpace(mesh, "CG", 2)
-# stream_func = fd.Function(stream).interpolate(1 / fd.pi * fd.sin(fd.pi * x) * fd.sin(fd.pi * y))
-# u = fd.Function(W).interpolate(fd.as_vector((-stream_func.dx(1), stream_func.dx(0))))
+stream = fd.FunctionSpace(mesh, "CG", 2)
+stream_func = fd.Function(stream).interpolate(1 / fd.pi * fd.sin(fd.pi * x) * fd.sin(fd.pi * y))
+u = fd.Function(W).interpolate(fd.as_vector((-stream_func.dx(1), stream_func.dx(0))))
 
 
 # initial condition for the atomsphere
@@ -73,10 +76,10 @@ q_data = fd.File('BA_Euler_q.pvd')
 
 # Initial setting for time
 # time period
-# T = 2 * math.pi
-# dt = 2 * math.pi / 1200
-T = math.pi
-dt = math.pi / 600
+T = 2 * math.pi
+dt = 2 * math.pi / 1200
+# T = math.pi
+# dt = math.pi / 600
 dtc = fd.Constant(dt)
 rho_in = fd.Constant(1.0)
 q_in = fd.Constant(1.0)
@@ -335,8 +338,6 @@ while t < T - 0.5*dt:
     print(f'stage{i},rho_min=', rho.dat.data.min())
     print(f'stage{i},q_max=', q.dat.data.max())
     print(f'stage{i},q_min=', q.dat.data.min())
-
-    
 
     # update the step and proceed to the next time step.
     i += 1
