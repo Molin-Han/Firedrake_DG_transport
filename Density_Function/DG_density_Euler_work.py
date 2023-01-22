@@ -14,6 +14,7 @@ x, y = SpatialCoordinate(mesh)
 #velocity field
 #velocity = as_vector(( (-0.05*x - y+0.475 ) , ( x - 0.05*y-0.525)))
 velocity = as_vector(( (0.5 - y ) , ( x - 0.5)))
+
 u = Function(W).interpolate(velocity)
 
 #initial condition for the atomsphere
@@ -49,6 +50,21 @@ a = phi*drho_trial*dx
 #Set Kuzmin limiter
 limiter = VertexBasedLimiter(V)
 
+#Set for the second limiter.
+DG0 = FunctionSpace(mesh, "DG", 0)
+beta = Function(DG0)
+beta1 = Function(DG0)
+beta2 = Function(DG0)
+
+rho_bar = Function(DG0)
+rho_hat_bar = Function(DG0)
+
+rho1_bar = Function(DG0)
+rho1_hat_bar = Function(DG0)
+
+rho2_bar = Function(DG0)
+rho2_hat_bar = Function(DG0)
+
 
 #elements
 n = FacetNormal(mesh)
@@ -56,19 +72,23 @@ un = 0.5*(dot(u, n) + abs(dot(u, n)))
 
 def both(vec):
     return vec('+') + vec('-')
+
+
+
+
 #Courant number setting
 ##############CHANGED HERE!!!!!!!!!!!!!
-DG1 = FunctionSpace(mesh, "DG", 1)
-One = Function(DG1).assign(1.0)
-v = TestFunction(DG1)
-#c+
-Courant_num_plus= Function(DG1)
+
+One = Function(DG0).assign(1.0)
+v = TestFunction(DG0)
+#ctil+
+Courant_num_plus= Function(DG0)
 Courant_num_form_plus = dt*(
     both(un*v)*(dS)
     + un*v*ds
 )
-Courant_denom_plus = Function(DG1)
-Courant_plus = Function(DG1)
+Courant_denom_plus = Function(DG0)
+Courant_plus = Function(DG0)
 
 
 assemble(One*v*dx, tensor=Courant_denom_plus)
@@ -76,33 +96,62 @@ assemble(Courant_num_form_plus, tensor=Courant_num_plus)
 Courant_plus.assign(Courant_num_plus/Courant_denom_plus)
 
 
-#c-
-Courant_num_minus = Function(DG1)
-Courant_num_form_minus  = dt*(
-    both(-un*v)*(dS)
-    - un*v*ds
+#ctil-
+Courant_num_minus = Function(DG0)
+Courant_num_form_minus  = -dt*(
+    both((inner(u,n)-un)*v)*(dS)
+    +(inner(u,n)-un)*v*ds
 )
-Courant_denom_minus  = Function(DG1)
-Courant_minus  = Function(DG1)
+Courant_denom_minus  = Function(DG0)
+Courant_minus  = Function(DG0)
 
 
 assemble(One*v*dx, tensor=Courant_denom_minus )
 assemble(Courant_num_form_minus , tensor=Courant_num_minus )
 Courant_minus.assign(Courant_num_minus /Courant_denom_minus )
 
-#Set for the second limiter.
-beta = Function(DG1)
-beta1 = Function(DG1)
-beta2 = Function(DG1)
 
-rho_bar = Function(DG1)
-rho_hat_bar = Function(DG1)
 
-rho1_bar = Function(DG1)
-rho1_hat_bar = Function(DG1)
 
-rho2_bar = Function(DG1)
-rho2_hat_bar = Function(DG1)
+
+#c+
+c_num_plus= Function(DG0)
+c_num_form_plus = dt*(
+    both(un*v*rho/rho_hat_bar)*(dS)
+    + un*v*rho/rho_hat_bar*ds
+)
+c_denom_plus = Function(DG0)
+c_plus = Function(DG0)
+
+
+assemble(One*v*dx, tensor=c_denom_plus)
+assemble(c_num_form_plus, tensor=c_num_plus)
+c_plus.assign(c_num_plus/c_denom_plus)
+
+
+#c-
+c_num_minus = Function(DG0)
+c_num_form_minus  = -dt*(
+    both((inner(u,n)-un)*v*rho/rho_hat_bar)*(dS)
+    +(inner(u,n)-un)*v*rho/rho_hat_bar*ds
+)
+c_denom_minus  = Function(DG0)
+c_minus  = Function(DG0)
+
+
+assemble(One*v*dx, tensor=c_denom_minus )
+assemble(c_num_form_minus , tensor=c_num_minus)
+c_minus.assign(c_num_minus /c_denom_minus )
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -150,7 +199,7 @@ rho_hat_bar.project(rho)
 #here rho is rho_hat as the limiter is applied
 #beta.assign(Max(0, Min(1, (1 + Courant_minus - Courant_plus*rho_hat_bar/rho_bar)
 #/(Courant_plus - Courant_plus*rho_hat_bar/rho_bar))))
-beta.assign(Max(0, Min(1, (1 + Courant_minus - Courant_plus)/(Courant_minus * rho / rho_hat_bar - Courant_plus * rho / rho_hat_bar - Courant_minus + Courant_plus))))
+beta.assign(Max(0, Min(1, (1 + Courant_minus - Courant_plus)/(c_num_minus - c_num_plus - Courant_minus + Courant_plus))))
 #apply the limiting scheme
 rho.project(rho_hat_bar + beta * (rho - rho_hat_bar))
 print(rho.dat.data.max())
@@ -168,8 +217,7 @@ while t < T - 0.5*dt:
     rho_bar.project(rho)
     limiter.apply(rho)
     rho_hat_bar.project(rho)
-    beta.assign(Max(0, Min(1, (1 + Courant_minus - Courant_plus)
-    /(Courant_minus * rho / rho_hat_bar - Courant_plus*rho / rho_hat_bar - Courant_minus + Courant_plus))))
+    beta.assign(Max(0, Min(1, (1 + Courant_minus - Courant_plus)/(c_num_minus - c_num_plus - Courant_minus + Courant_plus))))
     #apply the limiting scheme
     rho.project(rho_hat_bar + beta * (rho - rho_hat_bar))
 
