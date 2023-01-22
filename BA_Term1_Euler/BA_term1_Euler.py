@@ -119,6 +119,7 @@ rho_bar = Function(DG0)
 rho_hat_bar = Function(DG0)
 
 
+# check
 
 DG1 = fd.FunctionSpace(mesh, "DG", deg)
 One = fd.Function(DG0).assign(1.0)
