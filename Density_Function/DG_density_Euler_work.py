@@ -13,8 +13,8 @@ x, y = SpatialCoordinate(mesh)
 #Initial setting for the problem.
 #velocity field
 #velocity = as_vector(( (-0.05*x - y+0.475 ) , ( x - 0.05*y-0.525)))
-velocity = as_vector(( (0.5 - y ) , ( x - 0.5)))
-
+#velocity = as_vector(( (0.5 - y ) , ( x - 0.5)))
+velocity = as_vector((-2*pi*sin(2*pi*x)*cos(2*pi*y), -2*pi*cos(2*pi*x)*sin(2*pi*y)))
 u = Function(W).interpolate(velocity)
 
 #initial condition for the atomsphere
@@ -37,8 +37,8 @@ rho_init = Function(V).assign(rho)
 rhos = []
 
 #time period
-T = 6*math.pi
-dt = T/3600
+T = 2*math.pi
+dt = T/1200
 dtc = Constant(dt)
 rho_in = Constant(1.0)
 

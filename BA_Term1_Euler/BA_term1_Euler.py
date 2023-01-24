@@ -12,7 +12,7 @@ import math
 # not correct!
 
 mesh = fd.PeriodicUnitSquareMesh(40, 40)
-# mesh = fd.UnitSquareMesh(40, 40)
+#mesh = fd.UnitSquareMesh(40, 40)
 # space
 # degree of space
 deg = 1
@@ -43,8 +43,13 @@ x, y = fd.SpatialCoordinate(mesh)
 
 stream = fd.FunctionSpace(mesh, "CG", 2)
 stream_func = fd.Function(stream).interpolate(1 / fd.pi * fd.sin(fd.pi * x) * fd.sin(fd.pi * y))
-u = fd.Function(Velo).interpolate(fd.as_vector((-stream_func.dx(1), stream_func.dx(0))))
+# u = fd.Function(Velo).interpolate(fd.as_vector((-stream_func.dx(1), stream_func.dx(0))))
+#u = fd.Function(W).interpolate(fd.as_vector((-stream_func.dx(1), stream_func.dx(0))))
 
+velocity_phi = fd.as_vector((-0.2*fd.pi*fd.sin(2*fd.pi*x)*fd.cos(2*fd.pi*y), -0.2*fd.pi*fd.cos(2*fd.pi*x)*fd.sin(2*fd.pi*y)))
+velocity_psi = fd.as_vector((-0.2*fd.pi*fd.sin(2*fd.pi*x)*fd.cos(2*fd.pi*y), 0.2*fd.pi*fd.cos(2*fd.pi*x)*fd.sin(2*fd.pi*y)))
+u = fd.Function(W).interpolate(velocity_phi+velocity_psi)
+#u = fd.Function(W).interpolate(phi + psi)
 
 # initial condition for the atomsphere
 bell_r0 = 0.15; bell_x0 = 0.25; bell_y0 = 0.5
@@ -59,11 +64,12 @@ slot_cyl = fd.conditional(fd.sqrt(pow(x-cyl_x0, 2) + pow(y-cyl_y0, 2)) < cyl_r0,
             0.0, 1.0), 0.0)
 # + bell + cone + slot_cyl
 # initial condition for density equation
-rho = fd.Function(V).interpolate(1.0 + bell + cone + slot_cyl)
+#rho = fd.Function(V).interpolate(1.0 + bell + cone + slot_cyl)
+rho = fd.Function(V).interpolate(fd.Constant(1.0))
 rho_init = fd.Function(V).assign(rho)
 # initial condition for advection equation
-#q = fd.Function(V).interpolate(1.0 + bell + cone + slot_cyl)
-q = fd.Function(V).interpolate(0.00000001+bell + cone + slot_cyl)
+q = fd.Function(V).interpolate(bell)
+#q = fd.Function(V).interpolate(bell + cone + slot_cyl)
 q_init = fd.Function(V).assign(q)
 print("initial maxmimum for q", q.dat.data.max())
 
@@ -112,11 +118,11 @@ def both(vec):
 
 
 # Set for the Flux Limiter for Density Equation
-DG0 = FunctionSpace(mesh, "DG", 0)
-beta = Function(DG0)
+DG0 = fd.FunctionSpace(mesh, "DG", 0)
+beta = fd.Function(DG0)
 
-rho_bar = Function(DG0)
-rho_hat_bar = Function(DG0)
+rho_bar = fd.Function(DG0)
+rho_hat_bar = fd.Function(DG0)
 
 
 # check
@@ -138,13 +144,13 @@ Courant_plus = fd.Function(DG0)
 fd.assemble(One*v*fd.dx, tensor=Courant_denom_plus)
 fd.assemble(Courant_num_form_plus, tensor=Courant_num_plus)
 Courant_plus.assign(Courant_num_plus/Courant_denom_plus)
-print("Courant number for the initial problem",fd.norm(Courant_plus))
+print("Courant number for the initial problem", fd.norm(Courant_plus))
 
 # ctil-
 Courant_num_minus = fd.Function(DG0)
 Courant_num_form_minus = -dt*(
-    both((inner(u,n)-un)*v)*(dS)
-    +(inner(u,n)-un)*v*ds
+    both((fd.inner(u, n)-un)*v)*(fd.dS)
+    + (fd.inner(u, n)-un)*v*fd.ds
 )
 Courant_denom_minus = fd.Function(DG0)
 Courant_minus = fd.Function(DG0)
@@ -155,35 +161,35 @@ Courant_minus.assign(Courant_num_minus / Courant_denom_minus)
 
 
 # c+
-c_num_plus= Function(DG0)
+c_num_plus = fd.Function(DG0)
 c_num_form_plus = dt*(
-    both(un*v*rho/rho_hat_bar)*(dS)
-    + un*v*rho/rho_hat_bar*ds
+    both(un*v*rho/rho_hat_bar)*(fd.dS)
+    + un*v*rho/rho_hat_bar*fd.ds
 )
-c_denom_plus = Function(DG0)
-c_plus = Function(DG0)
+c_denom_plus = fd.Function(DG0)
+c_plus = fd.Function(DG0)
 
-assemble(One*v*dx, tensor=c_denom_plus)
-assemble(c_num_form_plus, tensor=c_num_plus)
+fd.assemble(One*v*fd.dx, tensor=c_denom_plus)
+fd.assemble(c_num_form_plus, tensor=c_num_plus)
 c_plus.assign(c_num_plus/c_denom_plus)
 
 
-#c-
-c_num_minus = Function(DG0)
-c_num_form_minus  = -dt*(
-    both((inner(u,n)-un)*v*rho/rho_hat_bar)*(dS)
-    +(inner(u,n)-un)*v*rho/rho_hat_bar*ds
+# c-
+c_num_minus = fd.Function(DG0)
+c_num_form_minus = -dt*(
+    both((fd.inner(u, n)-un)*v*rho / rho_hat_bar)*(fd.dS)
+    + (fd.inner(u, n)-un)*v*rho/rho_hat_bar*fd.ds
 )
-c_denom_minus  = Function(DG0)
-c_minus  = Function(DG0)
+c_denom_minus = fd.Function(DG0)
+c_minus = fd.Function(DG0)
 
 
-assemble(One*v*dx, tensor=c_denom_minus )
-assemble(c_num_form_minus , tensor=c_num_minus )
-c_minus.assign(c_num_minus /c_denom_minus )
+fd.assemble(One*v*fd.dx, tensor=c_denom_minus)
+fd.assemble(c_num_form_minus, tensor=c_num_minus)
+c_minus.assign(c_num_minus/c_denom_minus)
 
 
-# set for the expression for beta 
+# set for the expression for beta
 # wrong here
 # c_plus = Courant_plus * rho / rho_hat_bar
 # c_minus = Courant_minus * rho / rho_hat_bar
@@ -197,6 +203,7 @@ c_minus.assign(c_num_minus /c_denom_minus )
 
 
 beta_expr = fd.Max(0, fd.Min(1, (1 + c_minus - Courant_plus)/(c_plus - Courant_minus)))
+# beta_expr = 0.0
 
 
 # Density Equation Variational Problem
@@ -240,26 +247,28 @@ Fn = 0.5*(fd.dot((Fsf), n) + abs(fd.dot((Fsf), n)))
 
 
 # Flux limiting for q.
-alpha = fd.Function(DG1)
-q_bar = fd.Function(DG1)
-q_hat_bar = fd.Function(DG1)
+alpha = fd.Function(DG0)
+q_bar = fd.Function(DG0)
+q_hat_bar = fd.Function(DG0)
 
 # q+- factor in alpha
 
-q_plus = fd.Function(DG1)
-w = fd.TestFunction(DG1)
-q_plus_num = fd.Function(DG1)
-q_plus_form = both(Fn * w) * fd.dS + Fn * w * q * fd.ds
+q_plus = fd.Function(DG0)
+w = fd.TestFunction(DG0)
+q_plus_num = fd.Function(DG0)
+q_plus_form = both(Fn * w * q) * fd.dS + Fn * w * q * fd.ds
 fd.assemble(q_plus_form, tensor=q_plus_num)
 q_plus.assign((1/c_plus) * q_plus_num)
 
-q_minus = fd.Function(DG1)
-q_minus_num = fd.Function(DG1)
-q_minus_form = -both(Fn * w) * fd.dS - Fn * w * q_in * fd.ds
+q_minus = fd.Function(DG0)
+q_minus_num = fd.Function(DG0)
+q_minus_form = -(both((fd.inner(Fsf, n) - Fn) * w * q) * fd.dS
+                   + (fd.inner(Fsf, n) - Fn) * w * q * fd.ds)
 fd.assemble(q_minus_form, tensor=q_minus_num)
 q_minus.assign((1/c_minus) * q_minus_num)
 
 # maximum bound for q
+# local max and min should be used?
 qmax = fd.Constant(1.0)
 qmin = fd.Constant(0.0)
 # set alpha
@@ -268,6 +277,8 @@ alpha_expr = fd.Min(1, ((1 + c_minus - c_plus) * qmax - q_hat_bar * (1 - c_plus)
 # alpha_min_expr = fd.Constant(1.0)
 alpha_min_expr = fd.Min(1, (q_hat_bar * (1 - c_plus) + c_minus * q_minus - (1 + c_minus + c_plus) * qmin) / (c_plus * (q_plus - q_hat_bar)))
 
+#alpha_expr = 0
+#alpha_min_expr = 0
 
 # variational problem for q
 L_q = phi * rho * q * fd.dx + dtc * (q * fd.dot(fd.grad(phi), Fsf) * fd.dx
@@ -289,7 +300,7 @@ solv_q = fd.LinearVariationalSolver(prob_q, solver_parameters=params)
 # begin looping
 t = 0.0
 step = 0
-output_freq = 10
+output_freq = 5
 # stage
 i = 0
 
@@ -315,11 +326,11 @@ print("Maximum value of q after applying limiter", q.dat.data.max())
 q_hat_bar.project(q)
 
 
-alpha_expr_max = fd.Function(DG1)
-alpha_expr_min = fd.Function(DG1)
+alpha_expr_max = fd.Function(DG0)
+alpha_expr_min = fd.Function(DG0)
 alpha_expr_max.assign(alpha_expr)
 alpha_expr_min.assign(alpha_min_expr)
-print("Alpha_max and Alpha_min", alpha_expr_max.dat.data.min(), alpha_expr_min.dat.data.min())
+print("Alpha_max and Alpha_min", alpha_expr_max.dat.data.max(), alpha_expr_min.dat.data.max())
 alpha.assign(0)
 print("alpha_before", alpha.dat.data.min())
 alpha.interpolate(fd.Min(alpha_expr, alpha_min_expr))
@@ -334,9 +345,16 @@ print(f"stage{i},q_min=", q.dat.data.min())
 rho_data.write(rho)
 q_data.write(q)
 
+omega = fd.Constant(3.0)
 # Main Body
 # solve the density and the bounded advection
 while t < T - 0.5*dt:
+
+    u.interpolate(fd.cos(omega*fd.Constant(t))*velocity_phi + velocity_psi)
+
+
+
+
 
     # first stage
     # For Flux, it should be solved before rho is solved depending on the way it's defined.
@@ -349,6 +367,7 @@ while t < T - 0.5*dt:
     limiter_rho.apply(rho)
     rho_hat_bar.project(rho)
     beta.assign(beta_expr)
+    print('beta max and beta min', beta.dat.data.max(), beta.dat.data.min())
     # apply the limiting scheme
     rho.project(rho_hat_bar + beta * (rho - rho_hat_bar))
     # For rho_1
@@ -364,6 +383,10 @@ while t < T - 0.5*dt:
     limiter_q.apply(q)
     q_hat_bar.project(q)
     alpha.interpolate(fd.Min(alpha_expr, alpha_min_expr))
+
+    print("Alpha_max and Alpha_min", alpha.dat.data.max(), alpha.dat.data.min())
+
+
     q.project(q_hat_bar + alpha * (q - q_hat_bar))
 
     # rho.assign(rho_new)
