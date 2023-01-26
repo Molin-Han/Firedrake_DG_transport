@@ -83,7 +83,7 @@ q_data = fd.File('BA_Euler_q.pvd')
 
 # Initial setting for time
 # time period
-T = 2 * math.pi
+T = 2 * math.pi / 10
 dt = 2 * math.pi / 1200
 # T = math.pi
 # dt = math.pi / 600
@@ -300,7 +300,7 @@ solv_q = fd.LinearVariationalSolver(prob_q, solver_parameters=params)
 # begin looping
 t = 0.0
 step = 0
-output_freq = 5
+output_freq = 1
 # stage
 i = 0
 
@@ -345,14 +345,17 @@ print(f"stage{i},q_min=", q.dat.data.min())
 rho_data.write(rho)
 q_data.write(q)
 
-omega = fd.Constant(3.0)
+omega = fd.Constant(1.0)
 # Main Body
 # solve the density and the bounded advection
 while t < T - 0.5*dt:
 
-    u.interpolate(fd.cos(omega*fd.Constant(t))*velocity_phi + velocity_psi)
+    u.interpolate(0.1*fd.cos(omega*fd.Constant(t))*velocity_phi + velocity_psi)
 
 
+    # convergence test
+    if t >= T/4:
+        u.interpolate(-0.1*fd.cos(omega*fd.Constant(t))*velocity_phi - velocity_psi)
 
 
 
