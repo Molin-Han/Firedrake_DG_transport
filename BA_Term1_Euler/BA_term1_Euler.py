@@ -49,8 +49,11 @@ stream_func = fd.Function(stream).interpolate(1 / fd.pi * fd.sin(fd.pi * x) * fd
 velocity_phi = fd.as_vector((-0.2*fd.pi*fd.sin(2*fd.pi*x)*fd.cos(2*fd.pi*y), -0.2*fd.pi*fd.cos(2*fd.pi*x)*fd.sin(2*fd.pi*y)))
 velocity_psi = fd.as_vector((-0.2*fd.pi*fd.sin(2*fd.pi*x)*fd.cos(2*fd.pi*y), 0.2*fd.pi*fd.cos(2*fd.pi*x)*fd.sin(2*fd.pi*y)))
 u = fd.Function(W).interpolate(velocity_phi+velocity_psi)
+
 #u = fd.Function(W).interpolate(phi + psi)
 
+
+#u = fd.Function(W).interpolate(fd.as_vector((fd.Constant(0), fd.Constant(1.0))) + 0.01*velocity_phi)
 # initial condition for the atomsphere
 bell_r0 = 0.15; bell_x0 = 0.25; bell_y0 = 0.5
 cone_r0 = 0.15; cone_x0 = 0.5; cone_y0 = 0.25
@@ -84,7 +87,7 @@ q_data = fd.File('BA_Euler_q.pvd')
 # Initial setting for time
 # time period
 T = 2 * math.pi / 10
-dt = 2 * math.pi / 1200
+dt = 2 * math.pi / 1200 # make it bigger
 # T = math.pi
 # dt = math.pi / 600
 dtc = fd.Constant(dt)
@@ -275,7 +278,7 @@ qmin = fd.Constant(0.0)
 alpha_expr = fd.Min(1, ((1 + c_minus - c_plus) * qmax - q_hat_bar * (1 - c_plus) - c_minus * q_minus) / (c_plus * (q_hat_bar - q_plus)))
 # alpha_expr = 0
 # alpha_min_expr = fd.Constant(1.0)
-alpha_min_expr = fd.Min(1, (q_hat_bar * (1 - c_plus) + c_minus * q_minus - (1 + c_minus + c_plus) * qmin) / (c_plus * (q_plus - q_hat_bar)))
+alpha_min_expr = fd.Max(0, (q_hat_bar * (1 - c_plus) + c_minus * q_minus - (1 + c_minus + c_plus) * qmin) / (c_plus * (q_plus - q_hat_bar)))
 
 #alpha_expr = 0
 #alpha_min_expr = 0
@@ -345,23 +348,44 @@ print(f"stage{i},q_min=", q.dat.data.min())
 rho_data.write(rho)
 q_data.write(q)
 
-omega = fd.Constant(1.0)
+omega = fd.Constant(3.0)
 # Main Body
 # solve the density and the bounded advection
 while t < T - 0.5*dt:
 
     u.interpolate(0.1*fd.cos(omega*fd.Constant(t))*velocity_phi + velocity_psi)
+    #u.interpolate(fd.cos(omega*fd.Constant(t))*velocity_phi + velocity_psi)
+    #u.interpolate(fd.as_vector((fd.Constant(0), fd.Constant(1.0))) + 0.01*fd.cos(omega*fd.Constant(t))*velocity_phi)
 
 
     # convergence test
-    if t >= T/4:
-        u.interpolate(-0.1*fd.cos(omega*fd.Constant(t))*velocity_phi - velocity_psi)
+    #if t >= T/4:
+        #u.interpolate(-0.1*fd.cos(omega*fd.Constant(t))*velocity_phi - velocity_psi)
+    
+
+    # update the courant numbers
+    fd.assemble(Courant_num_form_plus, tensor=Courant_num_plus)
+    Courant_plus.assign(Courant_num_plus/Courant_denom_plus)
+    fd.assemble(Courant_num_form_minus, tensor=Courant_num_minus)
+    Courant_minus.assign(Courant_num_minus / Courant_denom_minus)
+    fd.assemble(c_num_form_plus, tensor=c_num_plus)
+    c_plus.assign(c_num_plus/c_denom_plus)
+    fd.assemble(c_num_form_minus, tensor=c_num_minus)
+    c_minus.assign(c_num_minus/c_denom_minus)
+
 
 
 
     # first stage
     # For Flux, it should be solved before rho is solved depending on the way it's defined.
     Fssolver.solve()
+
+
+    # update q value
+    fd.assemble(q_plus_form, tensor=q_plus_num)
+    q_plus.assign((1/c_plus) * q_plus_num)
+    fd.assemble(q_minus_form, tensor=q_minus_num)
+    q_minus.assign((1/c_minus) * q_minus_num)
     # solv1_rho.solve()
     # rho_new.assign(rho + drho)
     # rho.assign(rho_new)
@@ -385,7 +409,8 @@ while t < T - 0.5*dt:
     q_bar.project(q)
     limiter_q.apply(q)
     q_hat_bar.project(q)
-    alpha.interpolate(fd.Min(alpha_expr, alpha_min_expr))
+    # alpha is behaving weird.
+    alpha.interpolate(fd.Max(0,fd.Min(alpha_expr, alpha_min_expr)))
 
     print("Alpha_max and Alpha_min", alpha.dat.data.max(), alpha.dat.data.min())
 
@@ -407,6 +432,7 @@ while t < T - 0.5*dt:
     print(f'stage{i},rho_min=', rho.dat.data.min())
     print(f'stage{i},q_max=', q.dat.data.max())
     print(f'stage{i},q_min=', q.dat.data.min())
+    print('courant number!!!!!!!!', Courant_plus.dat.data.max())
 
     # update the step and proceed to the next time step.
     i += 1
