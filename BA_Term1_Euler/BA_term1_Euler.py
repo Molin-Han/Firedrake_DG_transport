@@ -71,8 +71,8 @@ slot_cyl = fd.conditional(fd.sqrt(pow(x-cyl_x0, 2) + pow(y-cyl_y0, 2)) < cyl_r0,
 rho = fd.Function(V).interpolate(fd.Constant(1.0))
 rho_init = fd.Function(V).assign(rho)
 # initial condition for advection equation
-q = fd.Function(V).interpolate(bell)
-#q = fd.Function(V).interpolate(bell + cone + slot_cyl)
+#q = fd.Function(V).interpolate(bell)
+q = fd.Function(V).interpolate(bell + cone + slot_cyl)
 q_init = fd.Function(V).assign(q)
 print("initial maxmimum for q", q.dat.data.max())
 
@@ -83,10 +83,13 @@ qs = []
 rho_data = fd.File('BA_Euler_rho.pvd')
 q_data = fd.File('BA_Euler_q.pvd')
 
+a_data = fd.File('a.pvd')
+b_data = fd.File('b.pvd')
+
 
 # Initial setting for time
 # time period
-T = 2 * math.pi / 4
+T = 2 * math.pi / 1
 dt = 2 * math.pi / 1200 # make it bigger
 # T = math.pi
 # dt = math.pi / 600
@@ -278,8 +281,8 @@ qmin = fd.Constant(0.0)
 alpha_expr = fd.Min(1, ((1 + c_minus - c_plus) * qmax - q_hat_bar * (1 - c_plus) + c_minus * q_minus) / (c_plus * (q_hat_bar - q_plus)))
 # alpha_expr = 0
 # alpha_min_expr = fd.Constant(1.0)
+#alpha_min_expr =  (q_hat_bar * (1 - c_plus) + c_minus * q_minus - (1 + c_minus - c_plus) * qmin) / (c_plus * (q_plus - q_hat_bar))
 alpha_min_expr = fd.Max(0, (q_hat_bar * (1 - c_plus) + c_minus * q_minus - (1 + c_minus - c_plus) * qmin) / (c_plus * (q_plus - q_hat_bar)))
-
 #alpha_expr = 0
 #alpha_min_expr = 0
 
@@ -342,7 +345,7 @@ alpha.interpolate(fd.Max(alpha_expr, alpha_min_expr))
 print("alpha_after_interpolate", alpha.dat.data.min())
 print("q_limiter_off", q.dat.data.max())
 #q.interpolate(q_hat_bar + alpha * (q - q_hat_bar))
-q.project(q_hat_bar + alpha * (q - q_hat_bar))
+#q.project(q_hat_bar + alpha * (q - q_hat_bar))
 print("q_hat_bar", q_hat_bar.dat.data.max())
 print("q_limiter_on", q.dat.data.max())
 print(f"stage{i},q_max=", q.dat.data.max())
@@ -351,6 +354,10 @@ rho_data.write(rho)
 q_data.write(q)
 
 omega = fd.Constant(3.0)
+
+
+a = fd.Function(DG0)
+b = fd.Function(DG0)
 # Main Body
 # solve the density and the bounded advection
 while t < T - 0.5*dt:
@@ -388,6 +395,8 @@ while t < T - 0.5*dt:
     q_plus.assign((1/c_plus) * q_plus_num)
     fd.assemble(q_minus_form, tensor=q_minus_num)
     q_minus.assign((1/c_minus) * q_minus_num)
+
+    #print('qqqqq+cccc', q_minus.dat.data.max(), c_minus.dat.data.max())
     # solv1_rho.solve()
     # rho_new.assign(rho + drho)
     # rho.assign(rho_new)
@@ -416,21 +425,28 @@ while t < T - 0.5*dt:
 
 
     # change in June
-    a = fd.Function(DG0)
-    b = fd.Function(DG0)
-    al_ma = a.assign(alpha_expr)
-    al_mi = b.assign(alpha_min_expr)
-    print("11Alpha_max, alpha_min", al_ma.dat.data.max(), al_mi.dat.data.max())
+
+    a.assign(alpha_expr)
+    b.assign(alpha_min_expr)
+    #print("11Alpha_max, alpha_min", a.dat.data.max(),a.dat.data.min(), b.dat.data.max(),b.dat.data.min())
+
+    #a_data.write(a)
+    #b_data.write(b)
+
+
     app = fd.Function(DG0)
     app.assign(fd.Max(0,fd.Max(alpha_expr, alpha_min_expr)))
-    print("!!!!app",app.dat.data.max(), app.dat.data.min())
-    alpha.interpolate(fd.Max(0,fd.Max(alpha_expr, alpha_min_expr)))
+    #print("!!!!app",app.dat.data.max(), app.dat.data.min())
+    #alpha.interpolate(fd.Max(0,fd.Max(alpha_expr, alpha_min_expr)))
+    alpha.interpolate(fd.conditional(q_hat_bar-q_plus>0, alpha_expr, alpha_min_expr))
     #alpha.interpolate(fd.Max(0,fd.Min(alpha_expr, alpha_min_expr)))
+    #alpha.interpolate(fd.Min(alpha_expr, alpha_min_expr))
 
     print("Alpha_max and Alpha_min", alpha.dat.data.max(), alpha.dat.data.min())
 
 
-    q.project(q_hat_bar + alpha * (q - q_hat_bar))
+    #q.project(q_hat_bar + alpha * (q - q_hat_bar))
+    q.project(q_hat_bar+1*(q-q_hat_bar))
 
     # rho.assign(rho_new)
     rho.assign(rho + drho)
