@@ -89,7 +89,7 @@ b_data = fd.File('b.pvd')
 
 # Initial setting for time
 # time period
-T = 2 * math.pi / 1
+T = 2 * math.pi / 8
 dt = 2 * math.pi / 1200 # make it bigger
 # T = math.pi
 # dt = math.pi / 600
@@ -445,8 +445,8 @@ while t < T - 0.5*dt:
     print("Alpha_max and Alpha_min", alpha.dat.data.max(), alpha.dat.data.min())
 
 
-    #q.project(q_hat_bar + alpha * (q - q_hat_bar))
-    q.project(q_hat_bar+1*(q-q_hat_bar))
+    q.project(q_hat_bar + alpha * (q - q_hat_bar))
+    #q.project(q_hat_bar+1*(q-q_hat_bar))
 
     # rho.assign(rho_new)
     rho.interpolate(rho + drho)
