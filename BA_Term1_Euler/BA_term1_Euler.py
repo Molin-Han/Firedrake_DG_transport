@@ -85,12 +85,13 @@ q_data = fd.File('BA_Euler_q.pvd')
 
 a_data = fd.File('a.pvd')
 b_data = fd.File('b.pvd')
+alpha_data = fd.File('alpha.pvd')
 
 
 # Initial setting for time
 # time period
 T = 2 * math.pi / 8
-dt = 2 * math.pi / 1200 # make it bigger
+dt = 2 * math.pi / 3200 # make it bigger
 # T = math.pi
 # dt = math.pi / 600
 dtc = fd.Constant(dt)
@@ -356,8 +357,12 @@ q_data.write(q)
 omega = fd.Constant(3.0)
 
 
+##########6.13
+cond_file = fd.File('cond.pvd')
 a = fd.Function(DG0)
 b = fd.Function(DG0)
+cond_func = fd.Function(DG0)
+cond = (1+c_minus-c_plus)*qmax-q_hat_bar*(1-c_plus)+c_minus*q_minus-c_plus*alpha*(q_plus-q_hat_bar)
 # Main Body
 # solve the density and the bounded advection
 while t < T - 0.5*dt:
@@ -428,8 +433,10 @@ while t < T - 0.5*dt:
 
     a.interpolate(alpha_expr)
     b.interpolate(alpha_min_expr)
+    cond_func.interpolate(cond)
+    print('!!!!condition',cond_func.dat.data.max(),cond_func.dat.data.min())
     #print("11Alpha_max, alpha_min", a.dat.data.max(),a.dat.data.min(), b.dat.data.max(),b.dat.data.min())
-
+    cond_file.write(cond_func)
     #a_data.write(a)
     #b_data.write(b)
 
@@ -439,6 +446,8 @@ while t < T - 0.5*dt:
     #print("!!!!app",app.dat.data.max(), app.dat.data.min())
     #alpha.interpolate(fd.Max(0,fd.Max(alpha_expr, alpha_min_expr)))
     alpha.interpolate(fd.conditional(q_hat_bar-q_plus>0, alpha_expr, alpha_min_expr))
+    if i>=22:
+        alpha.interpolate(fd.Constant(0.0))
     #alpha.interpolate(fd.Max(0,fd.Min(alpha_expr, alpha_min_expr)))
     #alpha.interpolate(fd.Min(alpha_expr, alpha_min_expr))
 
@@ -476,6 +485,7 @@ while t < T - 0.5*dt:
         print("t=", t)
         rho_data.write(rho)
         q_data.write(q)
+        alpha_data.write(alpha)
 
 
 L2_err_rho = fd.sqrt(fd.assemble((rho - rho_init)*(rho - rho_init) * fd.dx))
