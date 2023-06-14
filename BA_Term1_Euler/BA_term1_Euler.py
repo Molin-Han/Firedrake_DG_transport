@@ -357,16 +357,19 @@ q_data.write(q)
 omega = fd.Constant(3.0)
 
 
-##########6.13
-cond_file = fd.File('cond.pvd')
-a = fd.Function(DG0)
-b = fd.Function(DG0)
+##########6.13 check for (37) condition in limiter notes
+#cond_file = fd.File('cond.pvd')
+#a = fd.Function(DG0)
+#b = fd.Function(DG0)
 cond_func = fd.Function(DG0)
 cond = (1+c_minus-c_plus)*qmax-q_hat_bar*(1-c_plus)+c_minus*q_minus-c_plus*alpha*(q_plus-q_hat_bar)
+
+indicator = fd.Function(DG0)
+ind_file = fd.File('ind.pvd')
 # Main Body
 # solve the density and the bounded advection
 while t < T - 0.5*dt:
-
+    # time dependent velocity field
     u.interpolate(0.1*fd.cos(omega*fd.Constant(t))*velocity_phi + velocity_psi)
     #u.interpolate(fd.cos(omega*fd.Constant(t))*velocity_phi + velocity_psi)
     #u.interpolate(fd.as_vector((fd.Constant(0), fd.Constant(1.0))) + 0.01*fd.cos(omega*fd.Constant(t))*velocity_phi)
@@ -395,7 +398,7 @@ while t < T - 0.5*dt:
     Fssolver.solve()
 
 
-    # update q value
+    # update q+- value
     fd.assemble(q_plus_form, tensor=q_plus_num)
     q_plus.interpolate((1/c_plus) * q_plus_num)
     fd.assemble(q_minus_form, tensor=q_minus_num)
@@ -412,17 +415,19 @@ while t < T - 0.5*dt:
     beta.interpolate(beta_expr)
     print('beta max and beta min', beta.dat.data.max(), beta.dat.data.min())
     # apply the limiting scheme
-    rho.project(rho_hat_bar + beta * (rho - rho_hat_bar))
+    rho.project(rho_hat_bar + beta * (rho - rho_hat_bar)) # old rho after Kuzmin and flux limiter applied
     # For rho_1
     solv_rho.solve()
     rho_new.interpolate(rho + drho)
 
+
+    ####### change the order of solver and limiter
     # For q_1
-    solv_q.solve()
-    q.interpolate(qnew)
+    #solv_q.solve()
+    #q.interpolate(qnew)
 
     # q limiting scheme
-    q_bar.project(q)
+    #q_bar.project(q)
     limiter_q.apply(q)
     q_hat_bar.project(q)
     # alpha is behaving weird.
@@ -431,23 +436,29 @@ while t < T - 0.5*dt:
 
     # change in June
 
-    a.interpolate(alpha_expr)
-    b.interpolate(alpha_min_expr)
-    cond_func.interpolate(cond)
-    print('!!!!condition',cond_func.dat.data.max(),cond_func.dat.data.min())
+    #a.interpolate(alpha_expr)
+    #b.interpolate(alpha_min_expr)
+    #cond_func.interpolate(cond)
+    #print('!!!!condition',cond_func.dat.data.max(),cond_func.dat.data.min())
     #print("11Alpha_max, alpha_min", a.dat.data.max(),a.dat.data.min(), b.dat.data.max(),b.dat.data.min())
-    cond_file.write(cond_func)
+    #cond_file.write(cond_func)
     #a_data.write(a)
     #b_data.write(b)
 
 
-    app = fd.Function(DG0)
-    app.interpolate(fd.max_value(0,fd.max_value(alpha_expr, alpha_min_expr)))
+    #app = fd.Function(DG0)
+    #app.interpolate(fd.max_value(0,fd.max_value(alpha_expr, alpha_min_expr)))
     #print("!!!!app",app.dat.data.max(), app.dat.data.min())
     #alpha.interpolate(fd.Max(0,fd.Max(alpha_expr, alpha_min_expr)))
+    #alpha.interpolate(fd.conditional(q_hat_bar-q_plus<0, alpha_expr, alpha_min_expr))
     alpha.interpolate(fd.conditional(q_hat_bar-q_plus>0, alpha_expr, alpha_min_expr))
-    if i>=22:
-        alpha.interpolate(fd.Constant(0.0))
+
+    ####### tesing for qmax>1
+
+    indicator.interpolate(fd.conditional((q-fd.Constant(1.0+1e-6))>0, 1, 0))
+    ind_file.write(indicator)
+    #if i>=22:
+        #alpha.interpolate(fd.Constant(0.0))
     #alpha.interpolate(fd.Max(0,fd.Min(alpha_expr, alpha_min_expr)))
     #alpha.interpolate(fd.Min(alpha_expr, alpha_min_expr))
 
@@ -456,6 +467,8 @@ while t < T - 0.5*dt:
 
     q.project(q_hat_bar + alpha * (q - q_hat_bar))
     #q.project(q_hat_bar+1*(q-q_hat_bar))
+    solv_q.solve()
+    q.interpolate(qnew)
 
     # rho.assign(rho_new)
     rho.interpolate(rho + drho)
@@ -467,6 +480,8 @@ while t < T - 0.5*dt:
     beta.interpolate(beta_expr)
     # apply the limiting scheme
     rho.project(rho_hat_bar + beta * (rho - rho_hat_bar))
+    limiter_q.apply(q)
+    q.project(q_hat_bar + alpha * (q - q_hat_bar))
 
     print(f'stage{i},rho_max=', rho.dat.data.max())
     print(f'stage{i},rho_min=', rho.dat.data.min())
@@ -485,7 +500,7 @@ while t < T - 0.5*dt:
         print("t=", t)
         rho_data.write(rho)
         q_data.write(q)
-        alpha_data.write(alpha)
+        #alpha_data.write(alpha)
 
 
 L2_err_rho = fd.sqrt(fd.assemble((rho - rho_init)*(rho - rho_init) * fd.dx))
