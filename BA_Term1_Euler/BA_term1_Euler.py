@@ -7,10 +7,6 @@ import math
 # Mesh
 # For Flux problem to be solved correctly with BC
 
-
-# Problem existing: on boundary condition, the flux solved is
-# not correct!
-
 mesh = fd.PeriodicUnitSquareMesh(40, 40)
 #mesh = fd.UnitSquareMesh(40, 40)
 # space
@@ -83,8 +79,6 @@ qs = []
 rho_data = fd.File('BA_Euler_rho.pvd')
 q_data = fd.File('BA_Euler_q.pvd')
 
-a_data = fd.File('a.pvd')
-b_data = fd.File('b.pvd')
 alpha_data = fd.File('alpha.pvd')
 
 
@@ -92,8 +86,6 @@ alpha_data = fd.File('alpha.pvd')
 # time period
 T = 2 * math.pi / 8
 dt = 2 * math.pi / 3200 # make it bigger
-# T = math.pi
-# dt = math.pi / 600
 dtc = fd.Constant(dt)
 rho_in = fd.Constant(1.0)
 q_in = fd.Constant(1.0)
@@ -130,7 +122,9 @@ beta = fd.Function(DG0)
 
 rho_bar = fd.Function(DG0)
 rho_hat_bar = fd.Function(DG0)
-
+rho_bar.project(rho)
+limiter_rho.apply(rho)
+rho_hat_bar.project(rho)
 
 # check
 
@@ -196,21 +190,16 @@ fd.assemble(c_num_form_minus, tensor=c_num_minus)
 c_minus.interpolate(c_num_minus/c_denom_minus)
 
 
+
+print('#####################c-c+', c_plus.dat.data.max(), c_minus.dat.data.max())
 # set for the expression for beta
-# wrong here
 # c_plus = Courant_plus * rho / rho_hat_bar
 # c_minus = Courant_minus * rho / rho_hat_bar
-
-
-
 #####------------------########
 # two version of beta, one for colin's one for molin's
 
 # colin's version is used here
-
-
 beta_expr = fd.max_value(0, fd.min_value(1, (1 + c_minus - Courant_plus)/(c_plus - Courant_minus)))
-# beta_expr = 0.0
 
 
 # Density Equation Variational Problem
@@ -257,35 +246,44 @@ Fn = 0.5*(fd.dot((Fsf), n) + abs(fd.dot((Fsf), n)))
 alpha = fd.Function(DG0)
 q_bar = fd.Function(DG0)
 q_hat_bar = fd.Function(DG0)
+q_bar.project(q)
+limiter_q.apply(q)
+print("Maximum value of q after applying VB limiter", q.dat.data.max())
+q_hat_bar.project(q)
+# q+- factor in alpha ################
+# TODO : q+- are nan!: c is 0 somewhere change to c+q+=F+ product
 
-# q+- factor in alpha
 
-q_plus = fd.Function(DG0)
+F_plus = fd.Function(DG0)
 w = fd.TestFunction(DG0)
-q_plus_num = fd.Function(DG0)
-q_plus_form = both(Fn * w * q) * fd.dS + Fn * w * q * fd.ds
-fd.assemble(q_plus_form, tensor=q_plus_num)
-q_plus.interpolate((1/c_plus) * q_plus_num)
+F_plus_num = fd.Function(DG0)
+F_plus_form = both(Fn * w * q) * fd.dS + Fn * w * q * fd.ds
+fd.assemble(F_plus_form, tensor=F_plus_num)
+F_plus.interpolate(F_plus_num)
 
-q_minus = fd.Function(DG0)
-q_minus_num = fd.Function(DG0)
-q_minus_form = -(both((fd.inner(Fsf, n) - Fn) * w * q) * fd.dS
+F_minus = fd.Function(DG0)
+F_minus_num = fd.Function(DG0)
+F_minus_form = -(both((fd.inner(Fsf, n) - Fn) * w * q) * fd.dS
                    + (fd.inner(Fsf, n) - Fn) * w * q * fd.ds)
-fd.assemble(q_minus_form, tensor=q_minus_num)
-q_minus.interpolate((1/c_minus) * q_minus_num)
+fd.assemble(F_minus_form, tensor=F_minus_num)
+F_minus.interpolate(F_minus_num)
+
+print('##################################F-F+', F_plus.dat.data.max(), F_minus.dat.data.max())
+
+
 
 # maximum bound for q
 # local max and min should be used?
 qmax = fd.Constant(1.0)
 qmin = fd.Constant(0.0)
+
+
+
 # set alpha
-alpha_expr = fd.min_value(1, ((1 + c_minus - c_plus) * qmax - q_hat_bar * (1 - c_plus) + c_minus * q_minus) / (c_plus * (q_hat_bar - q_plus)))
-# alpha_expr = 0
-# alpha_min_expr = fd.Constant(1.0)
-#alpha_min_expr =  (q_hat_bar * (1 - c_plus) + c_minus * q_minus - (1 + c_minus - c_plus) * qmin) / (c_plus * (q_plus - q_hat_bar))
-alpha_min_expr = fd.max_value(0, (q_hat_bar * (1 - c_plus) + c_minus * q_minus - (1 + c_minus - c_plus) * qmin) / (c_plus * (q_plus - q_hat_bar)))
-#alpha_expr = 0
-#alpha_min_expr = 0
+alpha_expr = ((1 + c_minus - c_plus) * qmax - q_hat_bar * (1 - c_plus) - F_minus) / (c_plus * q_hat_bar - F_plus)
+alpha_min_expr = (q_hat_bar * (1 - c_plus) + F_minus - (1 + c_minus - c_plus) * qmin) / (F_plus - c_plus * q_hat_bar)
+
+
 
 # variational problem for q
 L_q = phi * rho * q * fd.dx + dtc * (q * fd.dot(fd.grad(phi), Fsf) * fd.dx
@@ -316,41 +314,10 @@ if step % output_freq == 0:
     qs.append(q.copy(deepcopy=True))
     print("t=", t)
 
-# Apply the limiter to q and density first and find beta, alpha.
-rho_bar.project(rho)
-limiter_rho.apply(rho)
-rho_hat_bar.project(rho)
-# Here rho is the value after applying the Kuzmin limiter i.e. rho_hat
+# find beta, alpha.
 beta.interpolate(beta_expr)
-# apply the limiting scheme to density
-# rho.project(rho_hat_bar + beta * (rho - rho_hat_bar))
-print(f"stage{i},rho_max=", rho.dat.data.max())
-print(f"stage{i},rho_min=", rho.dat.data.min())
-
-q_bar.project(q)
-limiter_q.apply(q)
-print("Maximum value of q after applying limiter", q.dat.data.max())
-q_hat_bar.project(q)
-
-
-alpha_expr_max = fd.Function(DG0)
-alpha_expr_min = fd.Function(DG0)
-alpha_expr_max.interpolate(alpha_expr)
-alpha_expr_min.interpolate(alpha_min_expr)
-print("Alpha_max and Alpha_min", alpha_expr_max.dat.data.max(), alpha_expr_min.dat.data.max())
-alpha.assign(0)
-print("alpha_before", alpha.dat.data.min())
-# 6.4 change
-#alpha.interpolate(fd.Min(alpha_expr, alpha_min_expr))
-alpha.interpolate(fd.max_value(alpha_expr, alpha_min_expr))
+alpha.interpolate(fd.min_value(fd.conditional(c_plus*q_hat_bar-F_plus>0, alpha_expr, alpha_min_expr),1))
 print("alpha_after_interpolate", alpha.dat.data.min())
-print("q_limiter_off", q.dat.data.max())
-#q.interpolate(q_hat_bar + alpha * (q - q_hat_bar))
-#q.project(q_hat_bar + alpha * (q - q_hat_bar))
-print("q_hat_bar", q_hat_bar.dat.data.max())
-print("q_limiter_on", q.dat.data.max())
-print(f"stage{i},q_max=", q.dat.data.max())
-print(f"stage{i},q_min=", q.dat.data.min())
 rho_data.write(rho)
 q_data.write(q)
 
@@ -358,27 +325,26 @@ omega = fd.Constant(3.0)
 
 
 ##########6.13 check for (37) condition in limiter notes
-#cond_file = fd.File('cond.pvd')
-#a = fd.Function(DG0)
-#b = fd.Function(DG0)
+cond_file = fd.File('cond.pvd')
 cond_func = fd.Function(DG0)
-cond = (1+c_minus-c_plus)*qmax-q_hat_bar*(1-c_plus)+c_minus*q_minus-c_plus*alpha*(q_plus-q_hat_bar)
+cond = (1+c_minus-c_plus)*qmax-q_hat_bar*(1-c_plus)#-c_plus*alpha*(q_plus-q_hat_bar)#+c_minus*q_minus
 
 indicator = fd.Function(DG0)
-ind_file = fd.File('ind.pvd')
+#ind_file = fd.File('ind.pvd')
+
+beta_file = fd.File('beta.pvd')
 # Main Body
 # solve the density and the bounded advection
 while t < T - 0.5*dt:
-    # time dependent velocity field
-    u.interpolate(0.1*fd.cos(omega*fd.Constant(t))*velocity_phi + velocity_psi)
+    print(f'##########################stage{i} starts#############')
+    # time dependent velocity field to make it compressible
+    u.interpolate(2*fd.cos(omega*fd.Constant(t))*velocity_phi + velocity_psi)
     #u.interpolate(fd.cos(omega*fd.Constant(t))*velocity_phi + velocity_psi)
     #u.interpolate(fd.as_vector((fd.Constant(0), fd.Constant(1.0))) + 0.01*fd.cos(omega*fd.Constant(t))*velocity_phi)
-
 
     # convergence test
     #if t >= T/4:
         #u.interpolate(-0.1*fd.cos(omega*fd.Constant(t))*velocity_phi - velocity_psi)
-    
 
     # update the courant numbers
     fd.assemble(Courant_num_form_plus, tensor=Courant_num_plus)
@@ -391,77 +357,54 @@ while t < T - 0.5*dt:
     c_minus.interpolate(c_num_minus/c_denom_minus)
 
 
-
-
-    # first stage
     # For Flux, it should be solved before rho is solved depending on the way it's defined.
     Fssolver.solve()
 
 
     # update q+- value
-    fd.assemble(q_plus_form, tensor=q_plus_num)
-    q_plus.interpolate((1/c_plus) * q_plus_num)
-    fd.assemble(q_minus_form, tensor=q_minus_num)
-    q_minus.interpolate((1/c_minus) * q_minus_num)
+    fd.assemble(F_plus_form, tensor=F_plus_num)
+    F_plus.interpolate(F_plus_num)
+    fd.assemble(F_minus_form, tensor=F_minus_num)
+    F_minus.interpolate(F_minus_num)
 
-    #print('qqqqq+cccc', q_minus.dat.data.max(), c_minus.dat.data.max())
-    # solv1_rho.solve()
-    # rho_new.assign(rho + drho)
-    # rho.assign(rho_new)
-    # rho limiting scheme, beta1 found.
+    print('###########FFFFF', F_minus.dat.data.max(), F_plus.dat.data.max())
+    # rho limiting scheme, beta found.
     rho_bar.project(rho)
+    # VB limiter
     limiter_rho.apply(rho)
     rho_hat_bar.project(rho)
     beta.interpolate(beta_expr)
+    # TODO: test for beta and visualise beta
+    beta_file.write(beta)
     print('beta max and beta min', beta.dat.data.max(), beta.dat.data.min())
-    # apply the limiting scheme
+    # apply the flux limiting scheme
     rho.project(rho_hat_bar + beta * (rho - rho_hat_bar)) # old rho after Kuzmin and flux limiter applied
-    # For rho_1
+    # solve for density
     solv_rho.solve()
+    # rho n+1
     rho_new.interpolate(rho + drho)
 
-
-    ####### change the order of solver and limiter
-    # For q_1
-    #solv_q.solve()
-    #q.interpolate(qnew)
-
     # q limiting scheme
-    #q_bar.project(q)
     limiter_q.apply(q)
-    q_hat_bar.project(q)
-    # alpha is behaving weird.
+    #FIXME:changed qbar
+    q_hat_bar.project(q * rho / rho_hat_bar)
 
-
-
-    # change in June
-
-    #a.interpolate(alpha_expr)
-    #b.interpolate(alpha_min_expr)
-    #cond_func.interpolate(cond)
-    #print('!!!!condition',cond_func.dat.data.max(),cond_func.dat.data.min())
-    #print("11Alpha_max, alpha_min", a.dat.data.max(),a.dat.data.min(), b.dat.data.max(),b.dat.data.min())
+    cond_func.interpolate(cond)
+    print('!!!!condition',cond_func.dat.data.max(),cond_func.dat.data.min())
     #cond_file.write(cond_func)
-    #a_data.write(a)
-    #b_data.write(b)
-
-
-    #app = fd.Function(DG0)
-    #app.interpolate(fd.max_value(0,fd.max_value(alpha_expr, alpha_min_expr)))
-    #print("!!!!app",app.dat.data.max(), app.dat.data.min())
-    #alpha.interpolate(fd.Max(0,fd.Max(alpha_expr, alpha_min_expr)))
-    #alpha.interpolate(fd.conditional(q_hat_bar-q_plus<0, alpha_expr, alpha_min_expr))
-    alpha.interpolate(fd.conditional(q_hat_bar-q_plus>0, alpha_expr, alpha_min_expr))
+    # TODO:Alpha negative
+    alpha.interpolate(fd.max_value(fd.min_value(fd.conditional(c_plus*q_hat_bar-F_plus>0, alpha_expr, alpha_min_expr),1),0))
 
     ####### tesing for qmax>1
 
-    indicator.interpolate(fd.conditional((q-fd.Constant(1.0+1e-6))>0, 1, 0))
-    ind_file.write(indicator)
+    #indicator.interpolate(fd.conditional(q-fd.Constant(1.0+1e-6)>0, 1, 0))
+    #ind_file.write(indicator)
+    #print('ind function',indicator.dat.data.max())
     #if i>=22:
         #alpha.interpolate(fd.Constant(0.0))
     #alpha.interpolate(fd.Max(0,fd.Min(alpha_expr, alpha_min_expr)))
     #alpha.interpolate(fd.Min(alpha_expr, alpha_min_expr))
-
+    #TODO:check alpha negative
     print("Alpha_max and Alpha_min", alpha.dat.data.max(), alpha.dat.data.min())
 
 
@@ -476,12 +419,12 @@ while t < T - 0.5*dt:
     # rho limiting scheme, beta1 found.
     rho_bar.project(rho)
     limiter_rho.apply(rho)
-    rho_hat_bar.project(rho)
-    beta.interpolate(beta_expr)
+    #rho_hat_bar.project(rho)
+    #beta.interpolate(beta_expr)
     # apply the limiting scheme
     rho.project(rho_hat_bar + beta * (rho - rho_hat_bar))
     limiter_q.apply(q)
-    q.project(q_hat_bar + alpha * (q - q_hat_bar))
+    #q.project(q_hat_bar + alpha * (q - q_hat_bar))
 
     print(f'stage{i},rho_max=', rho.dat.data.max())
     print(f'stage{i},rho_min=', rho.dat.data.min())
