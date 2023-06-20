@@ -39,11 +39,11 @@ x, y = fd.SpatialCoordinate(mesh)
 
 stream = fd.FunctionSpace(mesh, "CG", 2)
 stream_func = fd.Function(stream).interpolate(1 / fd.pi * fd.sin(fd.pi * x) * fd.sin(fd.pi * y))
-# u = fd.Function(Velo).interpolate(fd.as_vector((-stream_func.dx(1), stream_func.dx(0))))
-#u = fd.Function(W).interpolate(fd.as_vector((-stream_func.dx(1), stream_func.dx(0))))
+#u = fd.Function(Velo).interpolate(fd.as_vector((-stream_func.dx(1), stream_func.dx(0))))
+velocity_psi = fd.as_vector((-stream_func.dx(1), stream_func.dx(0)))
 
 velocity_phi = fd.as_vector((-0.2*fd.pi*fd.sin(2*fd.pi*x)*fd.cos(2*fd.pi*y), -0.2*fd.pi*fd.cos(2*fd.pi*x)*fd.sin(2*fd.pi*y)))
-velocity_psi = fd.as_vector((-0.2*fd.pi*fd.sin(2*fd.pi*x)*fd.cos(2*fd.pi*y), 0.2*fd.pi*fd.cos(2*fd.pi*x)*fd.sin(2*fd.pi*y)))
+#velocity_psi = fd.as_vector((-0.2*fd.pi*fd.sin(2*fd.pi*x)*fd.cos(2*fd.pi*y), 0.2*fd.pi*fd.cos(2*fd.pi*x)*fd.sin(2*fd.pi*y)))
 u = fd.Function(W).interpolate(velocity_phi+velocity_psi)
 
 #u = fd.Function(W).interpolate(phi + psi)
@@ -301,6 +301,15 @@ solv_rho = fd.LinearVariationalSolver(prob_rho, solver_parameters=params)
 prob_q = fd.LinearVariationalProblem(b, L_q, qnew)
 solv_q = fd.LinearVariationalSolver(prob_q, solver_parameters=params)
 
+psi = fd.TestFunction(V)
+q_trial = fd.TrialFunction(V)
+c = psi * rho * q_trial * fd.dx
+Q = fd.Function(V)
+L_lim_q = psi*Q*fd.dx
+
+prob_Q = fd.LinearVariationalProblem(c, L_lim_q, q)
+solv_Q = fd.LinearVariationalSolver(prob_Q, solver_parameters=params)
+
 
 # begin looping
 t = 0.0
@@ -321,13 +330,17 @@ print("alpha_after_interpolate", alpha.dat.data.min())
 rho_data.write(rho)
 q_data.write(q)
 
-omega = fd.Constant(3.0)
+omega = fd.Constant(30.0)
 
 
 ##########6.13 check for (37) condition in limiter notes
 cond_file = fd.File('cond.pvd')
-cond_func = fd.Function(DG0)
-cond = (1+c_minus-c_plus)*qmax-q_hat_bar*(1-c_plus)#-c_plus*alpha*(q_plus-q_hat_bar)#+c_minus*q_minus
+cond1_func = fd.Function(DG0)
+cond0_func = fd.Function(DG0)
+cond1 = (1+c_minus-c_plus) *qmax-q_hat_bar*(1-c_plus)-F_minus + F_plus - c_plus*q_hat_bar
+cond0 = (1+c_minus-c_plus) *qmax-q_hat_bar*(1-c_plus)-F_minus
+#cond = q_hat_bar*(1-c_plus)-F_minus
+#cond = (1+c_minus-c_plus)
 
 indicator = fd.Function(DG0)
 #ind_file = fd.File('ind.pvd')
@@ -338,7 +351,7 @@ beta_file = fd.File('beta.pvd')
 while t < T - 0.5*dt:
     print(f'##########################stage{i} starts#############')
     # time dependent velocity field to make it compressible
-    u.interpolate(2*fd.cos(omega*fd.Constant(t))*velocity_phi + velocity_psi)
+    u.interpolate(0.2*fd.cos(omega*fd.Constant(t))*velocity_phi + velocity_psi)
     #u.interpolate(fd.cos(omega*fd.Constant(t))*velocity_phi + velocity_psi)
     #u.interpolate(fd.as_vector((fd.Constant(0), fd.Constant(1.0))) + 0.01*fd.cos(omega*fd.Constant(t))*velocity_phi)
 
@@ -371,29 +384,37 @@ while t < T - 0.5*dt:
     # rho limiting scheme, beta found.
     rho_bar.project(rho)
     # VB limiter
-    limiter_rho.apply(rho)
+    #limiter_rho.apply(rho)
     rho_hat_bar.project(rho)
     beta.interpolate(beta_expr)
     # TODO: test for beta and visualise beta
-    beta_file.write(beta)
+    #beta_file.write(beta)
     print('beta max and beta min', beta.dat.data.max(), beta.dat.data.min())
     # apply the flux limiting scheme
-    rho.project(rho_hat_bar + beta * (rho - rho_hat_bar)) # old rho after Kuzmin and flux limiter applied
+    #rho.project(rho_hat_bar + beta * (rho - rho_hat_bar)) # old rho after Kuzmin and flux limiter applied
     # solve for density
     solv_rho.solve()
     # rho n+1
     rho_new.interpolate(rho + drho)
 
     # q limiting scheme
-    limiter_q.apply(q)
+    Q.project(rho*q)
+    limiter_q.apply(Q)
+    solv_Q.solve()
     # FIXME: changed qbar
     q_hat_bar.project(q * rho / rho_hat_bar)
 
-    cond_func.interpolate(cond)
-    print('!!!!condition',cond_func.dat.data.max(),cond_func.dat.data.min())
+    #cond_func.interpolate(cond)
+    #print('!!!!condition',cond_func.dat.data.max(),cond_func.dat.data.min())
     #cond_file.write(cond_func)
     # TODO:Alpha negative
-    alpha.interpolate(fd.min_value(fd.conditional(c_plus*q_hat_bar-F_plus>0, alpha_expr, alpha_min_expr),1))
+    cond0_func.interpolate(cond0)
+    cond1_func.interpolate(cond1)
+    print('cond0',cond0_func.dat.data.max(),cond0_func.dat.data.min())
+    print('cond01',cond1_func.dat.data.max(),cond1_func.dat.data.min())
+
+    alpha.interpolate(fd.conditional(cond0>0,fd.conditional(cond1>0,1,fd.conditional(c_plus*q_hat_bar-F_plus>0, alpha_expr, alpha_min_expr)), -99999))
+    #alpha.interpolate(fd.min_value(fd.conditional(c_plus*q_hat_bar-F_plus>0, alpha_expr, alpha_min_expr),1))
     #alpha.interpolate(fd.max_value(fd.min_value(fd.conditional(c_plus*q_hat_bar-F_plus>0, alpha_expr, alpha_min_expr),1),0))
 
     ####### tesing for qmax>1
