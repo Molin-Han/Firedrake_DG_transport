@@ -350,7 +350,7 @@ while t < T - 0.5*dt:
     fd.assemble(Courant_num_form_plus, tensor=Courant_num_plus)
     Courant_plus.interpolate(Courant_num_plus/Courant_denom_plus)
     fd.assemble(Courant_num_form_minus, tensor=Courant_num_minus)
-    Courant_minus.interpolate(Courant_num_minus / Courant_denom_minus)
+    Courant_minus.interpolate(Courant_num_minus/Courant_denom_minus)
     fd.assemble(c_num_form_plus, tensor=c_num_plus)
     c_plus.interpolate(c_num_plus/c_denom_plus)
     fd.assemble(c_num_form_minus, tensor=c_num_minus)
@@ -386,14 +386,15 @@ while t < T - 0.5*dt:
 
     # q limiting scheme
     limiter_q.apply(q)
-    #FIXME:changed qbar
+    # FIXME: changed qbar
     q_hat_bar.project(q * rho / rho_hat_bar)
 
     cond_func.interpolate(cond)
     print('!!!!condition',cond_func.dat.data.max(),cond_func.dat.data.min())
     #cond_file.write(cond_func)
     # TODO:Alpha negative
-    alpha.interpolate(fd.max_value(fd.min_value(fd.conditional(c_plus*q_hat_bar-F_plus>0, alpha_expr, alpha_min_expr),1),0))
+    alpha.interpolate(fd.min_value(fd.conditional(c_plus*q_hat_bar-F_plus>0, alpha_expr, alpha_min_expr),1))
+    #alpha.interpolate(fd.max_value(fd.min_value(fd.conditional(c_plus*q_hat_bar-F_plus>0, alpha_expr, alpha_min_expr),1),0))
 
     ####### tesing for qmax>1
 
@@ -413,16 +414,10 @@ while t < T - 0.5*dt:
     solv_q.solve()
     q.interpolate(qnew)
 
-    # rho.assign(rho_new)
+    # update rho value
     rho.interpolate(rho + drho)
-    # ## Testing
-    # rho limiting scheme, beta1 found.
-    rho_bar.project(rho)
     limiter_rho.apply(rho)
-    #rho_hat_bar.project(rho)
-    #beta.interpolate(beta_expr)
-    # apply the limiting scheme
-    rho.project(rho_hat_bar + beta * (rho - rho_hat_bar))
+    #rho.project(rho_hat_bar + beta * (rho - rho_hat_bar))
     limiter_q.apply(q)
     #q.project(q_hat_bar + alpha * (q - q_hat_bar))
 
@@ -443,7 +438,7 @@ while t < T - 0.5*dt:
         print("t=", t)
         rho_data.write(rho)
         q_data.write(q)
-        #alpha_data.write(alpha)
+        alpha_data.write(alpha)
 
 
 L2_err_rho = fd.sqrt(fd.assemble((rho - rho_init)*(rho - rho_init) * fd.dx))
