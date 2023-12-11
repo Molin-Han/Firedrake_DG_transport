@@ -85,7 +85,7 @@ alpha_data = fd.File('alpha.pvd')
 # Initial setting for time
 # time period
 T = 2 * math.pi / 8
-dt = 2 * math.pi / 3200 # make it bigger
+dt = 2 * math.pi / 1600 # make it bigger
 dtc = fd.Constant(dt)
 rho_in = fd.Constant(1.0)
 q_in = fd.Constant(1.0)
